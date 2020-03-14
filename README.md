@@ -4,7 +4,7 @@ An input display that reads directly from XInput controllers, with a customizabl
 ![Imgur](https://refrag.s-ul.eu/EdMDkU3w)    
 
 ### Download the exe:     
-https://github.com/R3FR4G/Controller-Input-Display/releases/tag/latest     
+https://github.com/R3FR4G/Controller-Input-Display/releases/latest     
      
      
 #### How to compile:     
