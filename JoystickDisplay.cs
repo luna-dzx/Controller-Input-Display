@@ -555,19 +555,19 @@ namespace JoystickDisplay
 			{
 				if (DUp != 0)
 				{
-					e.Graphics.DrawImage(imgDUp, 92, 25, 32, 32);
+					e.Graphics.DrawImage(imgDUp, 92, 3, 32, 62);
 				}
 				if (DDown != 0)
 				{
-					e.Graphics.DrawImage(imgDDown, 92, 79, 32, 32);
+					e.Graphics.DrawImage(imgDDown, 92, 71, 32, 62);
 				}
 				if (DRight != 0)
 				{
-					e.Graphics.DrawImage(imgDRight, 119, 52, 32, 32);
+					e.Graphics.DrawImage(imgDRight, 111, 52, 62, 32);
 				}
 				if (DLeft != 0)
 				{
-					e.Graphics.DrawImage(imgDLeft, 65, 52, 32, 32);
+					e.Graphics.DrawImage(imgDLeft, 43, 52, 62, 32);
 				}
 			}
 
