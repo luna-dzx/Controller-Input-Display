@@ -249,7 +249,7 @@ namespace JoystickDisplay
 				catch
 				{
 					LRButtons = 4;
-					RStickBehave = 1;
+					RStickBehave = 2;
 					DPadBehave = 1;
 					OpacityT = 1;
 				}
@@ -596,11 +596,33 @@ namespace JoystickDisplay
 				{
 					if (L == 0 && joyRX < 0)
 					{
-						L = 1;
+						L = 255;
 					}
 					if (R == 0 && joyRX > 0)
 					{
-						R = 1;
+						R = 255;
+					}
+				}
+				if (RStickBehave == 3)
+				{
+					if (LT == 0 && joyRX < 0)
+					{
+						LT = 255;
+					}
+					if (RT == 0 && joyRX > 0)
+					{
+						RT = 255;
+					}
+				}
+				if (RStickBehave == 4)
+				{
+					if (LB == 0 && joyRX < 0)
+					{
+						LB = 255;
+					}
+					if (RB == 0 && joyRX > 0)
+					{
+						RB = 255;
 					}
 				}
 				previousState = state;
@@ -734,7 +756,7 @@ namespace JoystickDisplay
 					e.Graphics.DrawString("" + countR, fontArial, Brushes.White, recR, formatRight);
 				}
 				if (LRButtons == 4)
-                {
+				{
 					e.Graphics.DrawString("" + countRT, fontArial, Brushes.White, recRT, formatRight);
 					e.Graphics.DrawString("" + countRB, fontArial, Brushes.White, recRB, formatRight);
 					e.Graphics.DrawString("" + countLT, fontArial, Brushes.White, recLT, formatLeft);
