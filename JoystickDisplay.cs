@@ -249,7 +249,7 @@ namespace JoystickDisplay
 				catch
 				{
 					LRButtons = 4;
-					RStickBehave = 2;
+					RStickBehave = 3;
 					DPadBehave = 1;
 					OpacityT = 1;
 				}
