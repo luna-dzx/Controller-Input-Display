@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Windows.Forms;
 using System.Threading;
 
@@ -15,8 +16,15 @@ namespace JoystickDisplay
 		private static int DeadzoneL;
 		private static int DeadzoneR;
 		private static int DPadBehave;
+		private static int OpacityT;
 		private static int fileRead = 0;
 		private static int tryCount = 5;
+		ColorMatrix colormatrixL = new ColorMatrix();
+		ColorMatrix colormatrixR = new ColorMatrix();
+		ColorMatrix colormatrixLT = new ColorMatrix();
+		ColorMatrix colormatrixLB = new ColorMatrix();
+		ColorMatrix colormatrixRT = new ColorMatrix();
+		ColorMatrix colormatrixRB = new ColorMatrix();
 
 		private static int x;
 		private static int y;
@@ -32,6 +40,10 @@ namespace JoystickDisplay
 		private static int Y;
 		private static int L;
 		private static int R;
+		private static int LT;
+		private static int LB;
+		private static int RT;
+		private static int RB;
 		private static int S;
 		private static int S2;
 		private static int DUp;
@@ -45,6 +57,10 @@ namespace JoystickDisplay
 		private static int prevY;
 		private static int prevL;
 		private static int prevR;
+		private static int prevLT;
+		private static int prevLB;
+		private static int prevRT;
+		private static int prevRB;
 		private static int prevS;
 		private static int prevS2;
 
@@ -54,6 +70,10 @@ namespace JoystickDisplay
 		private static int countY;
 		private static int countL;
 		private static int countR;
+		private static int countLT;
+		private static int countLB;
+		private static int countRT;
+		private static int countRB;
 		private static int countS;
 		private static int countS2;
 
@@ -63,6 +83,10 @@ namespace JoystickDisplay
 		private static Rectangle recY;
 		private static Rectangle recL;
 		private static Rectangle recR;
+		private static Rectangle recLT;
+		private static Rectangle recLB;
+		private static Rectangle recRT;
+		private static Rectangle recRB;
 		private static Rectangle recS;
 		private static Rectangle recS2;
 		private static Rectangle recDUp;
@@ -81,6 +105,10 @@ namespace JoystickDisplay
 		private static Bitmap imgY;
 		private static Bitmap imgL;
 		private static Bitmap imgR;
+		private static Bitmap imgLT;
+		private static Bitmap imgLB;
+		private static Bitmap imgRT;
+		private static Bitmap imgRB;
 		private static Bitmap imgS;
 		private static Bitmap imgS2;
 		private static Bitmap imgDUp;
@@ -110,8 +138,12 @@ namespace JoystickDisplay
 			B = 1;
 			X = 1;
 			Y = 1;
-			L = 1;
-			R = 1;
+			L = 255;
+			R = 255;
+			LT = 255;
+			LB = 255;
+			RT = 255;
+			RB = 255;
 			S = 1;
 			S2 = 1;
 			DUp = 1;
@@ -125,6 +157,10 @@ namespace JoystickDisplay
 			prevY = 1;
 			prevL = 1;
 			prevR = 1;
+			prevLT = 1;
+			prevLB = 1;
+			prevRT = 1;
+			prevRB = 1;
 			prevS = 1;
 			prevS2 = 1;
 
@@ -134,6 +170,10 @@ namespace JoystickDisplay
 			countY = 0;
 			countL = 0;
 			countR = 0;
+			countLT = 0;
+			countLB = 0;
+			countRT = 0;
+			countRB = 0;
 			countS = 0;
 			countS2 = 0;
 
@@ -152,16 +192,20 @@ namespace JoystickDisplay
 
 			penBlack = new Pen(Color.Black, 1);
 			penRed = new Pen(Color.Red, 1);
-			fontArial = new Font("Arial", 12, FontStyle.Bold, GraphicsUnit.Point);
+			fontArial = new Font("Arial", 10, FontStyle.Bold, GraphicsUnit.Point);
 
 			recL = new Rectangle(40, 4, 96, 36);
+			recLT = new Rectangle(40, 1, 96, 36);
+			recLB = new Rectangle(40, 19, 96, 36);
 			recY = new Rectangle(40, 52, 96, 36);
 			recA = new Rectangle(40, 100, 96, 36);
 			recR = new Rectangle(80, 4, 96, 36);
+			recRT = new Rectangle(80, 1, 96, 36);
+			recRB = new Rectangle(80, 19, 96, 36);
 			recX = new Rectangle(80, 52, 96, 36);
 			recB = new Rectangle(80, 100, 96, 36);
-			recS = new Rectangle(120, 28, 96, 36);
-			recS2 = new Rectangle(2, 28, 96, 36);
+			recS = new Rectangle(120, 30, 96, 36);
+			recS2 = new Rectangle(2, 30, 96, 36);
 			recDUp = new Rectangle(2, 28, 96, 36);
 			recDDown = new Rectangle(2, 28, 96, 36);
 			recDRight = new Rectangle(2, 28, 96, 36);
@@ -198,13 +242,16 @@ namespace JoystickDisplay
 					DeadzoneL = int.Parse(lines[2]);
 					DeadzoneR = int.Parse(lines[3]);
 					DPadBehave = int.Parse(lines[4]);
+					OpacityT = int.Parse(lines[5]);
+
 					fileRead = 1;
 				}
 				catch
 				{
-					LRButtons = 1;
+					LRButtons = 4;
 					RStickBehave = 1;
 					DPadBehave = 1;
+					OpacityT = 1;
 				}
 			}
 			// Initialize XInput
@@ -381,48 +428,99 @@ namespace JoystickDisplay
 
 				if (LRButtons == 1)
 				{
-					if ((state.Gamepad.Buttons & GamepadButtonFlags.LeftShoulder) != 0 || (state.Gamepad.LeftTrigger != 0))
+					if (OpacityT == 1)
 					{
-						L = 1;
+						if (state.Gamepad.LeftTrigger != 0)
+						{
+							L = state.Gamepad.LeftTrigger;
+						}
+						else
+						{
+							L = 0;
+						}
+						if (state.Gamepad.RightTrigger != 0)
+						{
+							R = state.Gamepad.RightTrigger;
+						}
+						else
+						{
+							R = 0;
+						}
 					}
-					else
+					if (OpacityT == 2)
 					{
-						L = 0;
+						if (state.Gamepad.LeftTrigger != 0)
+						{
+							L = 255;
+						}
+						else
+						{
+							L = 0;
+						}
+						if (state.Gamepad.RightTrigger != 0)
+						{
+							R = 255;
+						}
+						else
+						{
+							R = 0;
+						}
 					}
-					if ((state.Gamepad.Buttons & GamepadButtonFlags.RightShoulder) != 0 || (state.Gamepad.RightTrigger != 0))
-
+					if ((state.Gamepad.Buttons & GamepadButtonFlags.LeftShoulder) != 0)
 					{
-						R = 1;
+						L = 255;
 					}
-					else
+					if ((state.Gamepad.Buttons & GamepadButtonFlags.RightShoulder) != 0)
 					{
-						R = 0;
+						R = 255;
 					}
 				}
 				if (LRButtons == 2)
 				{
-					if (state.Gamepad.LeftTrigger != 0)
+					if (OpacityT == 1)
 					{
-						L = 1;
+						if (state.Gamepad.LeftTrigger != 0)
+						{
+							L = state.Gamepad.LeftTrigger;
+						}
+						else
+						{
+							L = 0;
+						}
+						if (state.Gamepad.RightTrigger != 0)
+						{
+							R = state.Gamepad.RightTrigger;
+						}
+						else
+						{
+							R = 0;
+						}
 					}
-					else
+					if (OpacityT == 2)
 					{
-						L = 0;
-					}
-					if (state.Gamepad.RightTrigger != 0)
-					{
-						R = 1;
-					}
-					else
-					{
-						R = 0;
+						if (state.Gamepad.LeftTrigger != 0)
+						{
+							L = 255;
+						}
+						else
+						{
+							L = 0;
+						}
+						if (state.Gamepad.RightTrigger != 0)
+						{
+							R = 255;
+						}
+						else
+						{
+							R = 0;
+						}
 					}
 				}
 				if (LRButtons == 3)
 				{
 					if ((state.Gamepad.Buttons & GamepadButtonFlags.LeftShoulder) != 0)
 					{
-						L = 1;
+						L = 255;
 					}
 					else
 					{
@@ -430,11 +528,68 @@ namespace JoystickDisplay
 					}
 					if ((state.Gamepad.Buttons & GamepadButtonFlags.RightShoulder) != 0)
 					{
-						R = 1;
+						R = 255;
 					}
 					else
 					{
 						R = 0;
+					}
+				}
+				if (LRButtons == 4)
+				{
+					if (OpacityT == 1)
+					{
+						if (state.Gamepad.LeftTrigger != 0)
+						{
+							LT = state.Gamepad.LeftTrigger;
+						}
+						else
+						{
+							LT = 0;
+						}
+						if (state.Gamepad.RightTrigger != 0)
+						{
+							RT = state.Gamepad.RightTrigger;
+						}
+						else
+						{
+							RT = 0;
+						}
+					}
+					if (OpacityT == 2)
+					{
+						if (state.Gamepad.LeftTrigger != 0)
+						{
+							LT = 255;
+						}
+						else
+						{
+							LT = 0;
+						}
+						if (state.Gamepad.RightTrigger != 0)
+						{
+							RT = 255;
+						}
+						else
+						{
+							RT = 0;
+						}
+					}
+					if ((state.Gamepad.Buttons & GamepadButtonFlags.LeftShoulder) != 0)
+					{
+						LB = 255;
+					}
+					else
+					{
+						LB = 0;
+					}
+					if ((state.Gamepad.Buttons & GamepadButtonFlags.RightShoulder) != 0)
+					{
+						RB = 255;
+					}
+					else
+					{
+						RB = 0;
 					}
 				}
 				if (RStickBehave == 2)
@@ -475,14 +630,46 @@ namespace JoystickDisplay
 				e.Graphics.DrawImage(imgY, 4, 52, 32, 32);
 			}
 
-			if (L != 0)
+			if (L != 0 && LRButtons != 4)
 			{
-				e.Graphics.DrawImage(imgL, 4, 4, 32, 32);
+				colormatrixL.Matrix33 = L / 255f;
+				ImageAttributes imgAttributeL = new ImageAttributes();
+				imgAttributeL.SetColorMatrix(colormatrixL, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
+				e.Graphics.DrawImage(imgL, new Rectangle(4, 4, 32, 32), 0, 0, 32, 32, GraphicsUnit.Pixel, imgAttributeL);
 			}
 
-			if (R != 0)
+			if (R != 0 && LRButtons != 4)
 			{
-				e.Graphics.DrawImage(imgR, 180, 4, 32, 32);
+				colormatrixR.Matrix33 = R / 255f;
+				ImageAttributes imgAttributeR = new ImageAttributes();
+				imgAttributeR.SetColorMatrix(colormatrixR, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
+				e.Graphics.DrawImage(imgR, new Rectangle(180, 4, 32, 32), 0, 0, 32, 32, GraphicsUnit.Pixel, imgAttributeR);
+			}
+
+			if (LRButtons == 4)
+			{
+				if (LT != 0)
+				{
+					colormatrixLT.Matrix33 = LT / 255f;
+					ImageAttributes imgAttributeLT = new ImageAttributes();
+					imgAttributeLT.SetColorMatrix(colormatrixLT, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
+					e.Graphics.DrawImage(imgLT, new Rectangle(4, 4, 32, 42), 0, 0, 32, 42, GraphicsUnit.Pixel, imgAttributeLT);
+				}
+				if (RT != 0)
+				{
+					colormatrixRT.Matrix33 = RT / 255f;
+					ImageAttributes imgAttributeRT = new ImageAttributes();
+					imgAttributeRT.SetColorMatrix(colormatrixRT, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
+					e.Graphics.DrawImage(imgRT, new Rectangle(180, 4, 32, 42), 0, 0, 32, 42, GraphicsUnit.Pixel, imgAttributeRT);
+				}
+				if (LB != 0)
+				{
+					e.Graphics.DrawImage(imgLB, 4, 4, 32, 42);
+				}
+				if (RB != 0)
+				{
+					e.Graphics.DrawImage(imgRB, 180, 4, 32, 42);
+				}
 			}
 
 			if (!drawButtonCount)
@@ -541,10 +728,21 @@ namespace JoystickDisplay
 					e.Graphics.DrawImage(imgS2, 80, 12, 16, 16);
 				}
 
-				e.Graphics.DrawString("" + countL, fontArial, Brushes.White, recL, formatLeft);
+				if (LRButtons != 4)
+				{
+					e.Graphics.DrawString("" + countL, fontArial, Brushes.White, recL, formatLeft);
+					e.Graphics.DrawString("" + countR, fontArial, Brushes.White, recR, formatRight);
+				}
+				if (LRButtons == 4)
+                {
+					e.Graphics.DrawString("" + countRT, fontArial, Brushes.White, recRT, formatRight);
+					e.Graphics.DrawString("" + countRB, fontArial, Brushes.White, recRB, formatRight);
+					e.Graphics.DrawString("" + countLT, fontArial, Brushes.White, recLT, formatLeft);
+					e.Graphics.DrawString("" + countLB, fontArial, Brushes.White, recLB, formatLeft);
+				}
+
 				e.Graphics.DrawString("" + countY, fontArial, Brushes.White, recY, formatLeft);
 				e.Graphics.DrawString("" + countA, fontArial, Brushes.White, recA, formatLeft);
-				e.Graphics.DrawString("" + countR, fontArial, Brushes.White, recR, formatRight);
 				e.Graphics.DrawString("" + countX, fontArial, Brushes.White, recX, formatRight);
 				e.Graphics.DrawString("" + countB, fontArial, Brushes.White, recB, formatRight);
 				e.Graphics.DrawString("" + countS, fontArial, Brushes.White, recS, formatLeft);
@@ -582,6 +780,10 @@ namespace JoystickDisplay
 			if (Y != 0 && prevY == 0) { countY++; }
 			if (L != 0 && prevL == 0) { countL++; }
 			if (R != 0 && prevR == 0) { countR++; }
+			if (LT != 0 && prevLT == 0) { countLT++; }
+			if (LB != 0 && prevLB == 0) { countLB++; }
+			if (RT != 0 && prevRT == 0) { countRT++; }
+			if (RB != 0 && prevRB == 0) { countRB++; }
 			if (S != 0 && prevS == 0) { countS++; }
 			if (S2 != 0 && prevS2 == 0) { countS2++; }
 
@@ -591,6 +793,10 @@ namespace JoystickDisplay
 			prevY = Y;
 			prevL = L;
 			prevR = R;
+			prevLT = LT;
+			prevLB = LB;
+			prevRT = RT;
+			prevRB = RB;
 			prevS = S;
 			prevS2 = S2;
 		}
@@ -620,6 +826,10 @@ namespace JoystickDisplay
 					imgY = new Bitmap(folder + "/buttY.png", false);
 					imgL = new Bitmap(folder + "/buttL.png", false);
 					imgR = new Bitmap(folder + "/buttR.png", false);
+					imgLT = new Bitmap(folder + "/buttLT.png", false);
+					imgLB = new Bitmap(folder + "/buttLB.png", false);
+					imgRT = new Bitmap(folder + "/buttRT.png", false);
+					imgRB = new Bitmap(folder + "/buttRB.png", false);
 					imgS = new Bitmap(folder + "/buttS.png", false);
 					imgS2 = new Bitmap(folder + "/buttS2.png", false);
 					imgDUp = new Bitmap(folder + "/DUp.png", false);
@@ -639,7 +849,7 @@ namespace JoystickDisplay
 				}
 			}
 			else
-            {
+			{
 				MessageBox.Show("The Program didn't found a folder with all the required images", "Input Display", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
@@ -683,6 +893,10 @@ namespace JoystickDisplay
 						countY = 0;
 						countL = 0;
 						countR = 0;
+						countLT = 0;
+						countLB = 0;
+						countRT = 0;
+						countRB = 0;
 						countS = 0;
 						countS2 = 0;
 						break;
