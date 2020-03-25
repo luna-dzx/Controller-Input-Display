@@ -717,6 +717,8 @@ namespace JoystickDisplay
 				}
 			}
 
+
+
 			if (!drawButtonCount)
 			{
 				if (S != 0)
@@ -732,6 +734,25 @@ namespace JoystickDisplay
 				int drawRY = 68 - ((64 * joyRY) / 128);
 
 				e.Graphics.DrawImage(imgBase, 108 - 64, 68 - 64, 128, 128);
+				if (DPadBehave == 1)
+				{
+					if (DUp != 0)
+					{
+						e.Graphics.DrawImage(imgDUp, 92, 3, 32, 62);
+					}
+					if (DDown != 0)
+					{
+						e.Graphics.DrawImage(imgDDown, 92, 71, 32, 62);
+					}
+					if (DRight != 0)
+					{
+						e.Graphics.DrawImage(imgDRight, 111, 52, 62, 32);
+					}
+					if (DLeft != 0)
+					{
+						e.Graphics.DrawImage(imgDLeft, 43, 52, 62, 32);
+					}
+				}
 				if (RStickBehave == 1 && (joyRX != 0 || joyRY != 0))
 				{
 					e.Graphics.DrawLine(penRStick, 108, 68, drawRX, drawRY);
@@ -793,27 +814,6 @@ namespace JoystickDisplay
 				e.Graphics.DrawString("" + countS, fontArial, Brushes.White, recS, formatLeft);
 				e.Graphics.DrawString("" + countS2, fontArial, Brushes.White, recS2, formatRight);
 			}
-
-			if (DPadBehave == 1 && drawButtonCount == false)
-			{
-				if (DUp != 0)
-				{
-					e.Graphics.DrawImage(imgDUp, 92, 3, 32, 62);
-				}
-				if (DDown != 0)
-				{
-					e.Graphics.DrawImage(imgDDown, 92, 71, 32, 62);
-				}
-				if (DRight != 0)
-				{
-					e.Graphics.DrawImage(imgDRight, 111, 52, 62, 32);
-				}
-				if (DLeft != 0)
-				{
-					e.Graphics.DrawImage(imgDLeft, 43, 52, 62, 32);
-				}
-			}
-
 			base.OnPaint(e);
 		}
 
