@@ -1,5 +1,5 @@
 Based on the Sonic Input display by jelly https://github.com/TurtleMan64/SADX-SA2-Input-Display
-You can edit the deadzone and the behaviour of RT LT, RB LB in the settings.ini file
+You can change different settings in the different .ini files, i suggest you to check these!
 
 You can switch between skins by using left/right arrow
 keys on your keyboard. New skins can be added by simply
