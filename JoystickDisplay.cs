@@ -116,8 +116,10 @@ namespace JoystickDisplay
 		private static Bitmap imgDRight;
 		private static Bitmap imgDLeft;
 
-		private static Pen penBlack;
-		private static Pen penRed;
+		private static Color ColorLStick;
+		private static Color ColorRStick;
+		private static Pen penLStick;
+		private static Pen penRStick;
 		private static Font fontArial;
 
 		private static StringFormat formatLeft;
@@ -188,10 +190,53 @@ namespace JoystickDisplay
 			}
 			catch { }
 
+			if (fileRead == 0)
+			{
+				try
+				{
+
+					string[] lines = System.IO.File.ReadAllLines("settings.ini");
+
+					LRButtons = int.Parse(lines[0]);
+					RStickBehave = int.Parse(lines[1]);
+					DeadzoneL = int.Parse(lines[2]);
+					DeadzoneR = int.Parse(lines[3]);
+					DPadBehave = int.Parse(lines[4]);
+					OpacityT = int.Parse(lines[5]);
+
+					string[] colorL = lines[8].Split(',');
+					string[] colorR = lines[9].Split(',');
+					int RL = Int32.Parse(colorL[0]);
+					int GL = Int32.Parse(colorL[1]);
+					int BL = Int32.Parse(colorL[2]);
+					ColorLStick = Color.FromArgb(RL, GL, BL);
+
+					int RR = Int32.Parse(colorR[0]);
+					int GR = Int32.Parse(colorR[1]);
+					int BR = Int32.Parse(colorR[2]);
+					ColorRStick = Color.FromArgb(RR, GR, BR);
+
+					fileRead = 1;
+				}
+				catch
+				{
+					LRButtons = 4;
+					RStickBehave = 3;
+					DPadBehave = 1;
+					OpacityT = 1;
+					DeadzoneL = 20;
+					DeadzoneR = 20;
+					ColorLStick = Color.FromArgb(0, 0, 0);
+					ColorRStick = Color.FromArgb(255, 0, 0);
+					fileRead = 1;
+					MessageBox.Show("Could not retrieve every settings from the settings.ini file\nThe program will use default ones, please download again the settings.ini file", "Input Display", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				}
+			}
+
 			reloadImages();
 
-			penBlack = new Pen(Color.Black, 1);
-			penRed = new Pen(Color.Red, 1);
+			penLStick = new Pen(ColorLStick, 1);
+			penRStick = new Pen(ColorRStick, 1);
 			fontArial = new Font("Arial", 10, FontStyle.Bold, GraphicsUnit.Point);
 
 			recL = new Rectangle(40, 4, 96, 36);
@@ -232,28 +277,6 @@ namespace JoystickDisplay
 		}
 		public void setControllerDataSADX()
 		{
-			if (fileRead == 0)
-			{
-				try
-				{
-					string[] lines = System.IO.File.ReadAllLines("settings.ini");
-					LRButtons = int.Parse(lines[0]);
-					RStickBehave = int.Parse(lines[1]);
-					DeadzoneL = int.Parse(lines[2]);
-					DeadzoneR = int.Parse(lines[3]);
-					DPadBehave = int.Parse(lines[4]);
-					OpacityT = int.Parse(lines[5]);
-
-					fileRead = 1;
-				}
-				catch
-				{
-					LRButtons = 4;
-					RStickBehave = 3;
-					DPadBehave = 1;
-					OpacityT = 1;
-				}
-			}
 			// Initialize XInput
 			var controllers = new[] { new Controller(UserIndex.One), new Controller(UserIndex.Two), new Controller(UserIndex.Three), new Controller(UserIndex.Four) };
 
@@ -711,7 +734,7 @@ namespace JoystickDisplay
 				e.Graphics.DrawImage(imgBase, 108 - 64, 68 - 64, 128, 128);
 				if (RStickBehave == 1 && (joyRX != 0 || joyRY != 0))
 				{
-					e.Graphics.DrawLine(penRed, 108, 68, drawRX, drawRY);
+					e.Graphics.DrawLine(penRStick, 108, 68, drawRX, drawRY);
 					e.Graphics.DrawImage(imgRStickSmall, drawRX - 4, drawRY - 4, 8, 8);
 
 					double radiusR = Math.Min(Math.Sqrt((joyRX * joyRX) + (joyRY * joyRY)), 128.0);
@@ -727,7 +750,7 @@ namespace JoystickDisplay
 				int drawX = 108 + ((64 * joyX) / 128);
 				int drawY = 68 - ((64 * joyY) / 128);
 
-				e.Graphics.DrawLine(penBlack, 108, 68, drawX, drawY);
+				e.Graphics.DrawLine(penLStick, 108, 68, drawX, drawY);
 				e.Graphics.DrawImage(imgStickSmall, drawX - 4, drawY - 4, 8, 8);
 
 				double radius = Math.Min(Math.Sqrt((joyX * joyX) + (joyY * joyY)), 128.0);
