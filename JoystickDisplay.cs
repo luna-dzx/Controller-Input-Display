@@ -11,12 +11,20 @@ namespace JoystickDisplay
 {
 	public partial class Display : Form
 	{
-		private static int LRButtons;
-		private static int RStickBehave;
-		private static int DeadzoneL;
-		private static int DeadzoneR;
-		private static int DPadBehave;
-		private static int OpacityT;
+		public static int LRButtons;
+		public static int RStickBehave;
+		public static int DeadzoneL;
+		public static int DeadzoneR;
+		public static int DPadBehave;
+		public static int OpacityT;
+
+		public static int previousLRButtons;
+		public static int previousRStickBehave;
+		public static int previousDeadzoneL;
+		public static int previousDeadzoneR;
+		public static int previousDPadBehave;
+		public static int previousOpacityT;
+
 		private static int fileRead = 0;
 		private static int tryCount = 5;
 		ColorMatrix colormatrixL = new ColorMatrix();
@@ -116,10 +124,16 @@ namespace JoystickDisplay
 		private static Bitmap imgDRight;
 		private static Bitmap imgDLeft;
 
-		private static Color ColorLStick;
-		private static Color ColorRStick;
-		private static Pen penLStick;
-		private static Pen penRStick;
+		public static Color ColorLStick;
+		public static Color ColorRStick;
+		public static Pen penLStick;
+		public static Pen penRStick;
+
+		public static Color previousColorLStick;
+		public static Color previousColorRStick;
+		public static Pen previousPenLStick;
+		public static Pen previousPenRStick;
+
 		private static Font fontArial;
 
 		private static StringFormat formatLeft;
@@ -229,7 +243,10 @@ namespace JoystickDisplay
 					ColorLStick = Color.FromArgb(0, 0, 0);
 					ColorRStick = Color.FromArgb(255, 0, 0);
 					fileRead = 1;
-					MessageBox.Show("Could not retrieve every settings from the settings.ini file\nThe program will use default ones, please download again the settings.ini file", "Input Display", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+					Settings.SaveSettings();
+
+					MessageBox.Show("Could not retrieve every settings from the settings.ini file\nThe program will use default ones", "Input Display", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				}
 			}
 
@@ -274,7 +291,45 @@ namespace JoystickDisplay
 
 			this.KeyPreview = true;
 			this.PreviewKeyDown += new PreviewKeyDownEventHandler(keyPress);
+
+			EventHandler settings = new EventHandler(Msettings);
+			EventHandler exit = new EventHandler(Mexit);
+
+			ContextMenu context = new ContextMenu();
+			context.MenuItems.Add("Settings", settings);
+			context.MenuItems.Add("-");
+			context.MenuItems.Add("Exit", exit);
+			ContextMenu = context;
 		}
+
+		public void Msettings(object sender, EventArgs e)
+        {
+			previousLRButtons = LRButtons;
+			previousRStickBehave = RStickBehave;
+			previousDeadzoneL = DeadzoneL;
+			previousDeadzoneR = DeadzoneR;
+			previousDPadBehave = DPadBehave;
+			previousOpacityT = OpacityT;
+
+			previousColorLStick = ColorLStick;
+			previousColorRStick = ColorRStick;
+			previousPenLStick = penLStick;
+			previousPenRStick = penRStick;
+
+			new Thread(() =>
+			{
+				Application.EnableVisualStyles();
+				Application.SetCompatibleTextRenderingDefault(false);
+				Application.Run(new Settings());
+			}).Start();
+		}
+
+		public void Mexit(object sender, EventArgs e)
+		{
+			saveIndex();
+			Environment.Exit(0);
+		}
+
 		public void setControllerDataSADX()
 		{
 			// Initialize XInput
@@ -971,6 +1026,259 @@ namespace JoystickDisplay
 				System.IO.File.WriteAllText("Index.ini", text);
 			}
 			catch { }
+		}
+	}
+
+	public partial class Settings : Form
+	{
+		private static ComboBox TSbuttons;
+		private static ComboBox TAlpha;
+		private static ComboBox RSbehave;
+		private static ComboBox DPbehave;
+		private static NumericUpDown LUpDown;
+		private static NumericUpDown RUpDown;
+		private static Button LColor2;
+		private static Button RColor2;
+		private static EventHandler LeftColor = new EventHandler(SelectLColor);
+		private static EventHandler RightColor = new EventHandler(SelectRColor);
+		private static EventHandler OKE = new EventHandler(OkF);
+		private static EventHandler CancelE = new EventHandler(CancelF);
+
+		public Settings()
+		{
+			MaximizeBox = false;
+			BackColor = Color.FromArgb(240, 240, 240);
+			ClientSize = new Size(401, 350);
+			FormBorderStyle = FormBorderStyle.FixedSingle;
+			Icon = new Icon("icon.ico");
+			Text = "Settings";
+			FormClosing += CancelF;
+
+			Label TSButt = AddConstantLabel("Trigger and Shoulder buttons =", new Point(20, 22));
+			Controls.Add(TSButt);
+
+			TSbuttons = new ComboBox();
+			TSbuttons.Items.Add("L & R");
+			TSbuttons.Items.Add("Only Trigger = L & R");
+			TSbuttons.Items.Add("Only Shoulder = L & R");
+			TSbuttons.Items.Add("LT/LB & RT/RB");
+			TSbuttons.Location = new Point(230, 20);
+			TSbuttons.Size = new Size(150, 1);
+			TSbuttons.DropDownStyle = ComboBoxStyle.DropDownList;
+			TSbuttons.SelectedIndex = Display.LRButtons - 1;
+			TSbuttons.SelectedIndexChanged += UpdateSettings;
+			Controls.Add(TSbuttons);
+
+			Label TriggAlpha = AddConstantLabel("Trigger buttons opacity :", new Point(20, 52));
+			Controls.Add(TriggAlpha);
+
+			TAlpha = new ComboBox();
+			TAlpha.Items.Add("Varies with the pression");
+			TAlpha.Items.Add("Full or nothing");
+			TAlpha.Location = new Point(230, 50);
+			TAlpha.Size = new Size(150, 1);
+			TAlpha.DropDownStyle = ComboBoxStyle.DropDownList;
+			TAlpha.SelectedIndex = Display.OpacityT - 1;
+			TAlpha.SelectedIndexChanged += UpdateSettings;
+			Controls.Add(TAlpha);
+
+			Label RSbeha = AddConstantLabel("Right Stick =", new Point(20, 82));
+			Controls.Add(RSbeha);
+
+			RSbehave = new ComboBox();
+			RSbehave.Items.Add("An other stick");
+			RSbehave.Items.Add("L & R");
+			RSbehave.Items.Add("LT & RT");
+			RSbehave.Items.Add("LB & RB");
+			RSbehave.Location = new Point(230, 80);
+			RSbehave.Size = new Size(150, 1);
+			RSbehave.DropDownStyle = ComboBoxStyle.DropDownList;
+			RSbehave.SelectedIndex = Display.RStickBehave - 1;
+			RSbehave.SelectedIndexChanged += UpdateSettings;
+			Controls.Add(RSbehave);
+
+			Label DPad = AddConstantLabel("DPad behaviour :", new Point(20, 112));
+			Controls.Add(DPad);
+
+			DPbehave = new ComboBox();
+			DPbehave.Items.Add("Uses the images");
+			DPbehave.Items.Add("Uses the stick line");
+			DPbehave.Location = new Point(230, 110);
+			DPbehave.Size = new Size(150, 1);
+			DPbehave.DropDownStyle = ComboBoxStyle.DropDownList;
+			DPbehave.SelectedIndex = Display.DPadBehave - 1;
+			DPbehave.SelectedIndexChanged += UpdateSettings;
+			Controls.Add(DPbehave);
+
+			Label Dead = AddConstantLabel("Deadzones :", new Point(20, 152));
+			Controls.Add(Dead);
+
+			Label LDead = AddConstantLabel("Left Stick :", new Point(20, 179));
+			Controls.Add(LDead);
+
+			LUpDown = new NumericUpDown();
+			LUpDown.Maximum = 130;
+			LUpDown.Minimum = 1;
+			LUpDown.Location = new Point(100, 178);
+			LUpDown.Size = new Size(70, 23);
+			LUpDown.Value = Display.DeadzoneL;
+			LUpDown.ValueChanged += UpdateSettings;
+			Controls.Add(LUpDown);
+
+			Label RDead = AddConstantLabel("Right Stick :", new Point(220, 179));
+			Controls.Add(RDead);
+
+			RUpDown = new NumericUpDown();
+			RUpDown.Maximum = 130;
+			RUpDown.Minimum = 1;
+			RUpDown.Location = new Point(310, 178);
+			RUpDown.Size = new Size(70, 23);
+			RUpDown.Value = Display.DeadzoneR;
+			RUpDown.ValueChanged += UpdateSettings;
+			Controls.Add(RUpDown);
+
+			Label lineColors = AddConstantLabel("Line colors :", new Point(20, 229));
+			Controls.Add(lineColors);
+
+			Label LCol = AddConstantLabel("Left Stick :", new Point(20, 256));
+			Controls.Add(LCol);
+
+			Button LColor = new Button();
+			LColor.Text = "...";
+			LColor.Location = new Point(131, 252);
+			LColor.Size = new Size(40, 23);
+			LColor.Click += LeftColor;
+			Controls.Add(LColor);
+
+			LColor2 = new Button();
+			LColor2.Text = "";
+			LColor2.Location = new Point(99, 252);
+			LColor2.Size = new Size(23, 23);
+			LColor2.Enabled = false;
+			LColor2.BackColor = Display.ColorLStick;
+			Controls.Add(LColor2);
+
+			Label RCol = AddConstantLabel("Right Stick :", new Point(220, 256));
+			Controls.Add(RCol);
+
+			Button RColor = new Button();
+			RColor.Text = "...";
+			RColor.Location = new Point(341, 252);
+			RColor.Size = new Size(40, 23);
+			RColor.Click += RightColor;
+			Controls.Add(RColor);
+
+			RColor2 = new Button();
+			RColor2.Text = "";
+			RColor2.Location = new Point(309, 252);
+			RColor2.Size = new Size(23, 23);
+			RColor2.Enabled = false;
+			RColor2.BackColor = Display.ColorRStick;
+			Controls.Add(RColor2);
+
+			Button OK = new Button();
+			OK.Text = "OK";
+			OK.Location = new Point(220, 300);
+			OK.Click += OKE;
+			Controls.Add(OK);
+			AcceptButton = OK;
+
+			Button Cancel = new Button();
+			Cancel.Text = "Cancel";
+			Cancel.Location = new Point(306, 300);
+			Cancel.Click += CancelE;
+			Controls.Add(Cancel);
+			CancelButton = Cancel;
+		}
+
+		static void OkF(object sender, EventArgs e)
+        {
+			SaveSettings();
+			Application.ExitThread();
+		}
+
+		public static void SaveSettings()
+        {
+			try
+			{
+				int LSR = Display.ColorLStick.R;
+				int LSG = Display.ColorLStick.G;
+				int LSB = Display.ColorLStick.B;
+				string LSLColor = LSR + "," + LSG + "," + LSB;
+
+				int RSR = Display.ColorRStick.R;
+				int RSG = Display.ColorRStick.G;
+				int RSB = Display.ColorRStick.B;
+				string RSLColor = RSR + "," + RSG + "," + RSB;
+
+				string[] contents = { Display.LRButtons.ToString(), Display.RStickBehave.ToString(), Display.DeadzoneL.ToString(), Display.DeadzoneR.ToString(), Display.DPadBehave.ToString(), Display.OpacityT.ToString(), "", "", LSLColor, RSLColor };
+				System.IO.File.WriteAllLines("settings.ini", contents);
+			}
+			catch
+			{
+				MessageBox.Show("Could not save the settings to the settings file\nTry to launch as administrator if it persists");
+			}
+		}
+
+		static void CancelF(object sender, EventArgs e)
+		{
+			Display.LRButtons = Display.previousLRButtons;
+			Display.RStickBehave = Display.previousRStickBehave;
+			Display.DeadzoneL = Display.previousDeadzoneL;
+			Display.DeadzoneR = Display.previousDeadzoneR;
+			Display.DPadBehave = Display.previousDPadBehave;
+			Display.OpacityT = Display.previousOpacityT;
+
+			Display.ColorLStick = Display.previousColorLStick;
+			Display.ColorRStick = Display.previousColorRStick;
+			Display.penLStick = Display.previousPenLStick;
+			Display.penRStick = Display.previousPenRStick;
+
+			Application.ExitThread();
+		}
+
+		static void SelectLColor(object sender, EventArgs e)
+		{
+			ColorDialog LSColor = new ColorDialog();
+			LSColor.Color = Display.ColorLStick;
+			if(LSColor.ShowDialog() == DialogResult.OK)
+            {
+				Display.ColorLStick = LSColor.Color;
+				Display.penLStick = new Pen(Display.ColorLStick, 1);
+				LColor2.BackColor = Display.ColorLStick;
+            }
+		}
+
+		static void SelectRColor(object sender, EventArgs e)
+		{
+			ColorDialog RSColor = new ColorDialog();
+			RSColor.Color = Display.ColorRStick;
+			if (RSColor.ShowDialog() == DialogResult.OK)
+			{
+				Display.ColorRStick = RSColor.Color;
+				Display.penRStick = new Pen(Display.ColorRStick, 1);
+				RColor2.BackColor = Display.ColorRStick;
+			}
+		}
+
+		static void UpdateSettings(object sender, EventArgs e)
+		{
+			Display.LRButtons = TSbuttons.SelectedIndex + 1;
+			Display.OpacityT = TAlpha.SelectedIndex + 1;
+			Display.RStickBehave = RSbehave.SelectedIndex + 1;
+			Display.DPadBehave = DPbehave.SelectedIndex + 1;
+			Display.DeadzoneL = (int)LUpDown.Value;
+			Display.DeadzoneR = (int)RUpDown.Value;
+		}
+
+		static Label AddConstantLabel(string text, Point location)
+		{
+			Label label = new Label();
+			label.Text = text;
+			label.Location = location;
+			label.AutoSize = true;
+			label.Font = new Font("Arial", 10);
+			return label;
 		}
 	}
 }
