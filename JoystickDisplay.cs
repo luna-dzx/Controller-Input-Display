@@ -903,7 +903,7 @@ namespace JoystickDisplay
 
 		public void reloadImages()
 		{
-			string path = System.IO.Path.GetDirectoryName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName);
+			string path = System.IO.Path.GetDirectoryName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName) + "\\res";
 			string[] folders = System.IO.Directory.GetDirectories(path, "*", System.IO.SearchOption.AllDirectories);
 
 			if (folderIndex < 0 || folderIndex >= folders.Length)
@@ -956,7 +956,7 @@ namespace JoystickDisplay
 
 		public void keyPress(object sender, PreviewKeyDownEventArgs e)
 		{
-			string path = System.IO.Path.GetDirectoryName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName);
+			string path = System.IO.Path.GetDirectoryName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName) + "\\res";
 			string[] folders = System.IO.Directory.GetDirectories(path, "*", System.IO.SearchOption.AllDirectories);
 
 			int prevFolderIndex = folderIndex;
