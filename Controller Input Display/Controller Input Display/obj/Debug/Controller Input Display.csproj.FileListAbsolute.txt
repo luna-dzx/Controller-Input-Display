@@ -156,3 +156,4 @@ D:\Users\R3FR4G\Documents\GitHub\Controller Input Display\Controller Input Displ
 D:\Users\R3FR4G\Documents\GitHub\Controller Input Display\Controller Input Display\Controller Input Display\obj\Debug\Controller Input Display.csproj.CopyComplete
 D:\Users\R3FR4G\Documents\GitHub\Controller Input Display\Controller Input Display\Controller Input Display\obj\Debug\Controller Input Display.exe
 D:\Users\R3FR4G\Documents\GitHub\Controller Input Display\Controller Input Display\Controller Input Display\obj\Debug\Controller Input Display.pdb
+D:\Users\R3FR4G\Documents\GitHub\Controller Input Display\Controller Input Display\Controller Input Display\bin\Debug\README.txt
