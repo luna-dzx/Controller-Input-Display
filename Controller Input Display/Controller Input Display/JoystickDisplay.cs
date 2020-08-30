@@ -11,6 +11,7 @@ namespace JoystickDisplay
 {
 	public partial class Display : Form
 	{
+		public static Controller controller;
 		public static int LRButtons;
 		public static int RStickBehave;
 		public static int DeadzoneL;
@@ -332,378 +333,182 @@ namespace JoystickDisplay
 
 		public void setControllerDataSADX()
 		{
-			// Initialize XInput
-			var controllers = new[] { new Controller(UserIndex.One), new Controller(UserIndex.Two), new Controller(UserIndex.Three), new Controller(UserIndex.Four) };
+			if (controller == null)
+            {
+				int i;
+				for (i = 0; i < 4; i++)
+                {
+					controller = new Controller((UserIndex)i);
+					if(controller.IsConnected)
+                    {
+						break;
+                    }
+                }
+				return;
+            }
+			if(!controller.IsConnected)
+            {
+				controller = null;
+				return;
+            }
+			var state = controller.GetState();
+			int gamepadButtons = (int)state.Gamepad.Buttons;
 
-			// Get 1st controller available
-			Controller controller = null;
-			foreach (var selectControler in controllers)
+			A = gamepadButtons & 4096;
+			B = gamepadButtons & 8192;
+			X = gamepadButtons & 16384;
+			Y = gamepadButtons & 32768;
+			S = gamepadButtons & 16;
+			S2 = gamepadButtons & 32;
+
+			DUp = gamepadButtons & 1;
+			DDown = gamepadButtons & 2;
+			DLeft = gamepadButtons & 4;
+			DRight = gamepadButtons & 8;
+
+			if (DPadBehave == 2)
 			{
-				if (selectControler.IsConnected)
+				joyY = 0;
+                joyY += DUp * 128;
+				joyY += DDown * (-64);
+
+				joyX = 0;
+				joyX += DLeft * (-32);
+				joyX += DRight * 16;
+
+				if (DDown + DUp == 0)
 				{
-					controller = selectControler;
-					break;
+					joyY = 0;
+				}
+				if (DLeft + DRight == 0)
+				{
+					joyX = 0;
+				}
+
+				if (DUp + DDown + DLeft + DRight == 0)
+				{
+					x = (int)(state.Gamepad.LeftThumbX / 257);
+					y = (int)(state.Gamepad.LeftThumbY / 257);
+					if (Math.Sqrt(Math.Pow(x, 2) + Math.Pow(y, 2)) > DeadzoneL)
+					{
+						joyX = x;
+						joyY = y;
+					}
 				}
 			}
 
-
-			if (controller != null)
+			if (DPadBehave == 1)
 			{
-				var previousState = controller.GetState();
-				var state = controller.GetState();
+				x = (int)(state.Gamepad.LeftThumbX / 257);
+				y = (int)(state.Gamepad.LeftThumbY / 257);
+				if (Math.Sqrt(Math.Pow(x, 2) + Math.Pow(y, 2)) > DeadzoneL)
+				{
+					joyX = x;
+					joyY = y;
+				}
+				else
+                {
+					joyX = 0;
+					joyY = 0;
+				}
+			}
 
-				if ((state.Gamepad.Buttons & GamepadButtonFlags.A) != 0)
+			Rx = (int)(state.Gamepad.RightThumbX / 257);
+			Ry = (int)(state.Gamepad.RightThumbY / 257);
+			if (Math.Sqrt(Math.Pow(Rx, 2) + Math.Pow(Ry, 2)) > DeadzoneR)
+			{
+				joyRX = Rx;
+				joyRY = Ry;
+			}
+			else
+			{
+				joyRX = 0;
+				joyRY = 0;
+			}
+
+			if (LRButtons == 1)
+			{
+				if (OpacityT == 1)
 				{
-					A = 1;
+					L = state.Gamepad.LeftTrigger;
+					R = state.Gamepad.RightTrigger;
 				}
-				else
+				if (OpacityT == 2)
 				{
-					A = 0;
-				}
-				if ((state.Gamepad.Buttons & GamepadButtonFlags.B) != 0)
-				{
-					B = 1;
-				}
-				else
-				{
-					B = 0;
-				}
-				if ((state.Gamepad.Buttons & GamepadButtonFlags.X) != 0)
-				{
-					X = 1;
-				}
-				else
-				{
-					X = 0;
-				}
-				if ((state.Gamepad.Buttons & GamepadButtonFlags.Y) != 0)
-				{
-					Y = 1;
-				}
-				else
-				{
-					Y = 0;
-				}
-				if ((state.Gamepad.Buttons & GamepadButtonFlags.Start) != 0)
-				{
-					S = 1;
-				}
-				else
-				{
-					S = 0;
-				}
-				if ((state.Gamepad.Buttons & GamepadButtonFlags.Back) != 0)
-				{
-					S2 = 1;
-				}
-				else
-				{
-					S2 = 0;
+					L = state.Gamepad.LeftTrigger * 255;
+					R = state.Gamepad.RightTrigger * 255;
 				}
 
-				if (DPadBehave == 1)
+				L += gamepadButtons & 256;
+				R += gamepadButtons & 512;
+			}
+			if (LRButtons == 2)
+			{
+				if (OpacityT == 1)
 				{
-					if ((state.Gamepad.Buttons & GamepadButtonFlags.DPadRight) != 0)
-					{
-						DRight = 1;
-					}
-					else
-					{
-						DRight = 0;
-					}
-					if ((state.Gamepad.Buttons & GamepadButtonFlags.DPadLeft) != 0)
-					{
-						DLeft = 1;
-					}
-					else
-					{
-						DLeft = 0;
-					}
-					if ((state.Gamepad.Buttons & GamepadButtonFlags.DPadUp) != 0)
-					{
-						DUp = 1;
-					}
-					else
-					{
-						DUp = 0;
-					}
-					if ((state.Gamepad.Buttons & GamepadButtonFlags.DPadDown) != 0)
-					{
-						DDown = 1;
-					}
-					else
-					{
-						DDown = 0;
-					}
+					L = state.Gamepad.LeftTrigger;
+					R = state.Gamepad.RightTrigger;
 				}
-				if (DPadBehave == 2)
+				if (OpacityT == 2)
 				{
-					if ((state.Gamepad.Buttons & GamepadButtonFlags.DPadRight) != 0)
-					{
-						joyX = 127;
-					}
-					else if ((state.Gamepad.Buttons & GamepadButtonFlags.DPadLeft) != 0)
-					{
-						joyX = -128;
-					}
-					if ((state.Gamepad.Buttons & GamepadButtonFlags.DPadUp) != 0)
-					{
-						joyY = 127;
-					}
-					else if ((state.Gamepad.Buttons & GamepadButtonFlags.DPadDown) != 0)
-					{
-						joyY = -128;
-					}
-					if ((state.Gamepad.Buttons & GamepadButtonFlags.DPadDown) == 0 && (state.Gamepad.Buttons & GamepadButtonFlags.DPadUp) == 0)
-					{
-						joyY = 0;
-					}
-					if ((state.Gamepad.Buttons & GamepadButtonFlags.DPadLeft) == 0 && (state.Gamepad.Buttons & GamepadButtonFlags.DPadRight) == 0)
-					{
-						joyX = 0;
-					}
+					L = state.Gamepad.LeftTrigger * 255;
+					R = state.Gamepad.RightTrigger * 255;
+				}
+			}
+			if (LRButtons == 3)
+			{
+				L = gamepadButtons & 256;
+				R = gamepadButtons & 512;
+
+			}
+			if (LRButtons == 4)
+			{
+				if (OpacityT == 1)
+				{
+					LT = state.Gamepad.LeftTrigger;
+					RT = state.Gamepad.RightTrigger;
+				}
+				if (OpacityT == 2)
+				{
+					LT = state.Gamepad.LeftTrigger * 255;
+					RT = state.Gamepad.RightTrigger * 255;
 				}
 
-				if ((state.Gamepad.Buttons & GamepadButtonFlags.DPadLeft) == 0 && (state.Gamepad.Buttons & GamepadButtonFlags.DPadRight) == 0 && (state.Gamepad.Buttons & GamepadButtonFlags.DPadUp) == 0 && (state.Gamepad.Buttons & GamepadButtonFlags.DPadDown) == 0 && DPadBehave == 2)
+				LB = gamepadButtons & 256;
+				RB = gamepadButtons & 512;
+			}
+			if (RStickBehave == 2)
+			{
+				if (L == 0 && joyRX < 0)
 				{
-					x = (int)(state.Gamepad.LeftThumbX / 257);
-					y = (int)(state.Gamepad.LeftThumbY / 257);
-					if (Math.Sqrt(Math.Pow(x, 2) + Math.Pow(y, 2)) > DeadzoneL)
-					{
-						joyX = x;
-						joyY = y;
-					}
+					L = 255;
 				}
-
-				if (DPadBehave == 1)
+				if (R == 0 && joyRX > 0)
 				{
-					x = (int)(state.Gamepad.LeftThumbX / 257);
-					y = (int)(state.Gamepad.LeftThumbY / 257);
-					if (Math.Sqrt(Math.Pow(x, 2) + Math.Pow(y, 2)) > DeadzoneL)
-					{
-						joyX = x;
-						joyY = y;
-					}
-					else
-					{
-						joyX = 0;
-						joyY = 0;
-					}
+					R = 255;
 				}
-
-				Rx = (int)(state.Gamepad.RightThumbX / 257);
-				Ry = (int)(state.Gamepad.RightThumbY / 257);
-				if (Math.Sqrt(Math.Pow(Rx, 2) + Math.Pow(Ry, 2)) > DeadzoneR)
+			}
+			if (RStickBehave == 3)
+			{
+				if (LT == 0 && joyRX < 0)
 				{
-					joyRX = Rx;
-					joyRY = Ry;
+					LT = 255;
 				}
-				else
+				if (RT == 0 && joyRX > 0)
 				{
-					joyRX = 0;
-					joyRY = 0;
+					RT = 255;
 				}
-
-				if (LRButtons == 1)
+			}
+			if (RStickBehave == 4)
+			{
+				if (LB == 0 && joyRX < 0)
 				{
-					if (OpacityT == 1)
-					{
-						if (state.Gamepad.LeftTrigger != 0)
-						{
-							L = state.Gamepad.LeftTrigger;
-						}
-						else
-						{
-							L = 0;
-						}
-						if (state.Gamepad.RightTrigger != 0)
-						{
-							R = state.Gamepad.RightTrigger;
-						}
-						else
-						{
-							R = 0;
-						}
-					}
-					if (OpacityT == 2)
-					{
-						if (state.Gamepad.LeftTrigger != 0)
-						{
-							L = 255;
-						}
-						else
-						{
-							L = 0;
-						}
-						if (state.Gamepad.RightTrigger != 0)
-						{
-							R = 255;
-						}
-						else
-						{
-							R = 0;
-						}
-					}
-					if ((state.Gamepad.Buttons & GamepadButtonFlags.LeftShoulder) != 0)
-					{
-						L = 255;
-					}
-					if ((state.Gamepad.Buttons & GamepadButtonFlags.RightShoulder) != 0)
-					{
-						R = 255;
-					}
+					LB = 255;
 				}
-				if (LRButtons == 2)
+				if (RB == 0 && joyRX > 0)
 				{
-					if (OpacityT == 1)
-					{
-						if (state.Gamepad.LeftTrigger != 0)
-						{
-							L = state.Gamepad.LeftTrigger;
-						}
-						else
-						{
-							L = 0;
-						}
-						if (state.Gamepad.RightTrigger != 0)
-						{
-							R = state.Gamepad.RightTrigger;
-						}
-						else
-						{
-							R = 0;
-						}
-					}
-					if (OpacityT == 2)
-					{
-						if (state.Gamepad.LeftTrigger != 0)
-						{
-							L = 255;
-						}
-						else
-						{
-							L = 0;
-						}
-						if (state.Gamepad.RightTrigger != 0)
-						{
-							R = 255;
-						}
-						else
-						{
-							R = 0;
-						}
-					}
+					RB = 255;
 				}
-				if (LRButtons == 3)
-				{
-					if ((state.Gamepad.Buttons & GamepadButtonFlags.LeftShoulder) != 0)
-					{
-						L = 255;
-					}
-					else
-					{
-						L = 0;
-					}
-					if ((state.Gamepad.Buttons & GamepadButtonFlags.RightShoulder) != 0)
-					{
-						R = 255;
-					}
-					else
-					{
-						R = 0;
-					}
-				}
-				if (LRButtons == 4)
-				{
-					if (OpacityT == 1)
-					{
-						if (state.Gamepad.LeftTrigger != 0)
-						{
-							LT = state.Gamepad.LeftTrigger;
-						}
-						else
-						{
-							LT = 0;
-						}
-						if (state.Gamepad.RightTrigger != 0)
-						{
-							RT = state.Gamepad.RightTrigger;
-						}
-						else
-						{
-							RT = 0;
-						}
-					}
-					if (OpacityT == 2)
-					{
-						if (state.Gamepad.LeftTrigger != 0)
-						{
-							LT = 255;
-						}
-						else
-						{
-							LT = 0;
-						}
-						if (state.Gamepad.RightTrigger != 0)
-						{
-							RT = 255;
-						}
-						else
-						{
-							RT = 0;
-						}
-					}
-					if ((state.Gamepad.Buttons & GamepadButtonFlags.LeftShoulder) != 0)
-					{
-						LB = 255;
-					}
-					else
-					{
-						LB = 0;
-					}
-					if ((state.Gamepad.Buttons & GamepadButtonFlags.RightShoulder) != 0)
-					{
-						RB = 255;
-					}
-					else
-					{
-						RB = 0;
-					}
-				}
-				if (RStickBehave == 2)
-				{
-					if (L == 0 && joyRX < 0)
-					{
-						L = 255;
-					}
-					if (R == 0 && joyRX > 0)
-					{
-						R = 255;
-					}
-				}
-				if (RStickBehave == 3)
-				{
-					if (LT == 0 && joyRX < 0)
-					{
-						LT = 255;
-					}
-					if (RT == 0 && joyRX > 0)
-					{
-						RT = 255;
-					}
-				}
-				if (RStickBehave == 4)
-				{
-					if (LB == 0 && joyRX < 0)
-					{
-						LB = 255;
-					}
-					if (RB == 0 && joyRX > 0)
-					{
-						RB = 255;
-					}
-				}
-				previousState = state;
 			}
 			refreshButtonCounts();
 		}
