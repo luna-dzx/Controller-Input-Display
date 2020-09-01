@@ -6,10 +6,10 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 using JoystickDisplay;
+using UserSettings = Controller_Input_Display.Properties.Settings;
 
 public class SonicInputDisplay
 {
-	const int PROCESS_VM_READ = 0x0010;
 	const int SW_HIDE = 0;
 
 	[DllImport("kernel32.dll")]
@@ -29,7 +29,7 @@ public class SonicInputDisplay
 	public static int gameID = 1;
 	public static bool loop = true;
 
-	private static Display theDisplay;
+	public static Display theDisplay;
 
 	public static void Main()
 	{
@@ -42,26 +42,41 @@ public class SonicInputDisplay
 		theDisplay.MaximizeBox = false;
 		theDisplay.FormBorderStyle = FormBorderStyle.FixedSingle;
 		theDisplay.StartPosition = FormStartPosition.CenterScreen;
-		theDisplay.BackColor = Color.FromArgb(2, 2, 2); //Almost, but not exactly black
+		theDisplay.BackColor = Color.FromArgb(0, 0, 0);
 		theDisplay.Text = "Input Display";
-
-		try
-		{
-			string[] lines = System.IO.File.ReadAllLines("BackgroundColor.ini");
-			string[] color = lines[0].Split(',');
-			int r = Int32.Parse(color[0]);
-			int g = Int32.Parse(color[1]);
-			int b = Int32.Parse(color[2]);
-			theDisplay.BackColor = Color.FromArgb(r, g, b);
-		}
-		catch { }
+        theDisplay.FormClosing += TheDisplay_FormClosing;
+		if(System.IO.File.Exists("BackgroundColor.ini"))
+        {
+			try
+			{
+				string[] lines = System.IO.File.ReadAllLines("BackgroundColor.ini");
+				string[] color = lines[0].Split(',');
+				int r = Int32.Parse(color[0]);
+				int g = Int32.Parse(color[1]);
+				int b = Int32.Parse(color[2]);
+				theDisplay.BackColor = Color.FromArgb(r, g, b);
+			}
+			catch { }
+			finally
+            {
+				try
+                {
+					System.IO.File.Delete("BackgroundColor.ini");
+                }
+				catch { }
+            }
+        }
+		else
+        {
+			theDisplay.BackColor = UserSettings.Default.BackgroundColor;
+        }
 
 		//Thread to handle the window
 		new Thread(() =>
 		{
 			Thread.CurrentThread.IsBackground = true;
 			theDisplay.ShowDialog();
-			theDisplay.saveIndex();
+			Settings.SaveSettings();
 			loop = false;
 		}).Start();
 
@@ -76,7 +91,15 @@ public class SonicInputDisplay
 		}
 	}
 
-	private static void setValuesFromSADX()
+    private static void TheDisplay_FormClosing(object sender, FormClosingEventArgs e)
+    {
+		if (Display.isSettingsOpened)
+		{
+			e.Cancel = true;
+		}
+	}
+
+    private static void setValuesFromSADX()
 	{
 		theDisplay.setControllerDataSADX();
 	}

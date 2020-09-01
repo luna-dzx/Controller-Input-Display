@@ -6,11 +6,13 @@ using System.Threading;
 
 using SharpDX;
 using SharpDX.XInput;
+using UserSettings = Controller_Input_Display.Properties.Settings;
 
 namespace JoystickDisplay
 {
 	public partial class Display : Form
 	{
+		public static bool isSettingsOpened = false;
 		public static Controller controller;
 		public static int LRButtons;
 		public static int RStickBehave;
@@ -26,14 +28,11 @@ namespace JoystickDisplay
 		public static int previousDPadBehave;
 		public static int previousOpacityT;
 
-		private static int fileRead = 0;
 		private static int tryCount = 5;
 		ColorMatrix colormatrixL = new ColorMatrix();
 		ColorMatrix colormatrixR = new ColorMatrix();
 		ColorMatrix colormatrixLT = new ColorMatrix();
-		ColorMatrix colormatrixLB = new ColorMatrix();
 		ColorMatrix colormatrixRT = new ColorMatrix();
-		ColorMatrix colormatrixRB = new ColorMatrix();
 
 		private static int x;
 		private static int y;
@@ -98,10 +97,6 @@ namespace JoystickDisplay
 		private static Rectangle recRB;
 		private static Rectangle recS;
 		private static Rectangle recS2;
-		private static Rectangle recDUp;
-		private static Rectangle recDDown;
-		private static Rectangle recDRight;
-		private static Rectangle recDLeft;
 
 		private static Bitmap imgBase;
 		private static Bitmap imgStick;
@@ -135,13 +130,15 @@ namespace JoystickDisplay
 		public static Pen previousPenLStick;
 		public static Pen previousPenRStick;
 
+		public static Color previousFormBackColor;
+
 		private static Font fontArial;
 
 		private static StringFormat formatLeft;
 		private static StringFormat formatCenter;
 		private static StringFormat formatRight;
 
-		private static int folderIndex;
+		public static int folderIndex;
 
 		private static bool drawButtonCount = false;
 
@@ -196,20 +193,34 @@ namespace JoystickDisplay
 
 			folderIndex = 0;
 
+			if (System.IO.File.Exists("Index.ini"))
+            {
+				try
+				{
+					string[] lines = System.IO.File.ReadAllLines("Index.ini");
+					int savedIndex = Int32.Parse(lines[0]);
+					folderIndex = savedIndex;
+				}
+				catch { }
+				finally
+                {
+					try
+					{
+						System.IO.File.Delete("Index.ini");
+					}
+					catch { }
+				}
+            }
+			else
+            {
+				folderIndex = UserSettings.Default.Index;
+            }
 
-			try
-			{
-				string[] lines = System.IO.File.ReadAllLines("Index.ini");
-				int savedIndex = Int32.Parse(lines[0]);
-				folderIndex = savedIndex;
-			}
-			catch { }
-
-			if (fileRead == 0)
+			//suport for legacy settings
+			if (System.IO.File.Exists("settings.ini"))
 			{
 				try
 				{
-
 					string[] lines = System.IO.File.ReadAllLines("settings.ini");
 
 					LRButtons = int.Parse(lines[0]);
@@ -230,8 +241,6 @@ namespace JoystickDisplay
 					int GR = Int32.Parse(colorR[1]);
 					int BR = Int32.Parse(colorR[2]);
 					ColorRStick = Color.FromArgb(RR, GR, BR);
-
-					fileRead = 1;
 				}
 				catch
 				{
@@ -243,13 +252,29 @@ namespace JoystickDisplay
 					DeadzoneR = 20;
 					ColorLStick = Color.FromArgb(0, 0, 0);
 					ColorRStick = Color.FromArgb(255, 0, 0);
-					fileRead = 1;
-
-					Settings.SaveSettings();
 
 					MessageBox.Show("Could not retrieve every settings from the settings.ini file\nThe program will use default ones", "Input Display", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				}
+				finally
+                {
+					try
+                    {
+						System.IO.File.Delete("settings.ini");
+                    }
+					catch { }
+                }
 			}
+			else
+            {
+				LRButtons = UserSettings.Default.LRButtons;
+				RStickBehave = UserSettings.Default.RStickBehave;
+				DPadBehave = UserSettings.Default.DPadBehave;
+				OpacityT = UserSettings.Default.OpacityT;
+				DeadzoneL = UserSettings.Default.DeadzoneL;
+				DeadzoneR = UserSettings.Default.DeadzoneR;
+				ColorLStick = UserSettings.Default.ColorLStick;
+				ColorRStick = UserSettings.Default.ColorRStick;
+            }
 
 			reloadImages();
 
@@ -269,10 +294,6 @@ namespace JoystickDisplay
 			recB = new Rectangle(80, 100, 96, 36);
 			recS = new Rectangle(120, 30, 96, 36);
 			recS2 = new Rectangle(2, 30, 96, 36);
-			recDUp = new Rectangle(2, 28, 96, 36);
-			recDDown = new Rectangle(2, 28, 96, 36);
-			recDRight = new Rectangle(2, 28, 96, 36);
-			recDLeft = new Rectangle(2, 28, 96, 36);
 
 			formatLeft = new StringFormat();
 			formatCenter = new StringFormat();
@@ -305,6 +326,10 @@ namespace JoystickDisplay
 
 		public void Msettings(object sender, EventArgs e)
         {
+			if(isSettingsOpened)
+            {
+				return;
+            }
 			previousLRButtons = LRButtons;
 			previousRStickBehave = RStickBehave;
 			previousDeadzoneL = DeadzoneL;
@@ -317,6 +342,10 @@ namespace JoystickDisplay
 			previousPenLStick = penLStick;
 			previousPenRStick = penRStick;
 
+			previousFormBackColor = SonicInputDisplay.theDisplay.BackColor;
+
+			isSettingsOpened = true;
+
 			new Thread(() =>
 			{
 				Application.EnableVisualStyles();
@@ -327,7 +356,11 @@ namespace JoystickDisplay
 
 		public void Mexit(object sender, EventArgs e)
 		{
-			saveIndex();
+			if (isSettingsOpened)
+			{
+				return;
+			}
+			Settings.SaveSettings();
 			Environment.Exit(0);
 		}
 
@@ -822,16 +855,6 @@ namespace JoystickDisplay
 				reloadImages();
 			}
 		}
-
-		public void saveIndex()
-		{
-			try
-			{
-				string text = "" + folderIndex;
-				System.IO.File.WriteAllText("Index.ini", text);
-			}
-			catch { }
-		}
 	}
 
 	public partial class Settings : Form
@@ -844,8 +867,10 @@ namespace JoystickDisplay
 		private static NumericUpDown RUpDown;
 		private static Button LColor2;
 		private static Button RColor2;
+		private static Button FormBackColor2;
 		private static EventHandler LeftColor = new EventHandler(SelectLColor);
 		private static EventHandler RightColor = new EventHandler(SelectRColor);
+		private static EventHandler BackColorE = new EventHandler(SelectBackColor);
 		private static EventHandler OKE = new EventHandler(OkF);
 		private static EventHandler CancelE = new EventHandler(CancelF);
 
@@ -981,6 +1006,24 @@ namespace JoystickDisplay
 			RColor2.BackColor = Display.ColorRStick;
 			Controls.Add(RColor2);
 
+			Label FormBackColorLabel = AddConstantLabel("Backcolor :", new Point(20, 304));
+			Controls.Add(FormBackColorLabel);
+
+			Button FormBackColor = new Button();
+			FormBackColor.Text = "...";
+			FormBackColor.Location = new Point(131, 300);
+			FormBackColor.Size = new Size(40, 23);
+			FormBackColor.Click += BackColorE;
+			Controls.Add(FormBackColor);
+
+			FormBackColor2 = new Button();
+			FormBackColor2.Text = "";
+			FormBackColor2.Location = new Point(99, 300);
+			FormBackColor2.Size = new Size(23, 23);
+			FormBackColor2.Enabled = false;
+			FormBackColor2.BackColor = SonicInputDisplay.theDisplay.BackColor;
+			Controls.Add(FormBackColor2);
+
 			Button OK = new Button();
 			OK.Text = "OK";
 			OK.Location = new Point(220, 300);
@@ -999,30 +1042,23 @@ namespace JoystickDisplay
 		static void OkF(object sender, EventArgs e)
         {
 			SaveSettings();
+			Display.isSettingsOpened = false;
 			Application.ExitThread();
 		}
 
 		public static void SaveSettings()
         {
-			try
-			{
-				int LSR = Display.ColorLStick.R;
-				int LSG = Display.ColorLStick.G;
-				int LSB = Display.ColorLStick.B;
-				string LSLColor = LSR + "," + LSG + "," + LSB;
-
-				int RSR = Display.ColorRStick.R;
-				int RSG = Display.ColorRStick.G;
-				int RSB = Display.ColorRStick.B;
-				string RSLColor = RSR + "," + RSG + "," + RSB;
-
-				string[] contents = { Display.LRButtons.ToString(), Display.RStickBehave.ToString(), Display.DeadzoneL.ToString(), Display.DeadzoneR.ToString(), Display.DPadBehave.ToString(), Display.OpacityT.ToString(), "", "", LSLColor, RSLColor };
-				System.IO.File.WriteAllLines("settings.ini", contents);
-			}
-			catch
-			{
-				MessageBox.Show("Could not save the settings to the settings file\nTry to launch as administrator if it persists");
-			}
+			UserSettings.Default.LRButtons = Display.LRButtons;
+			UserSettings.Default.RStickBehave = Display.RStickBehave;
+			UserSettings.Default.DeadzoneL = Display.DeadzoneL;
+			UserSettings.Default.DeadzoneR = Display.DeadzoneR;
+			UserSettings.Default.DPadBehave = Display.DPadBehave;
+			UserSettings.Default.OpacityT = Display.OpacityT;
+			UserSettings.Default.ColorLStick = Display.ColorLStick;
+			UserSettings.Default.ColorRStick = Display.ColorRStick;
+			UserSettings.Default.Index = Display.folderIndex;
+			UserSettings.Default.BackgroundColor = SonicInputDisplay.theDisplay.BackColor;
+			UserSettings.Default.Save();
 		}
 
 		static void CancelF(object sender, EventArgs e)
@@ -1039,6 +1075,9 @@ namespace JoystickDisplay
 			Display.penLStick = Display.previousPenLStick;
 			Display.penRStick = Display.previousPenRStick;
 
+			SonicInputDisplay.theDisplay.BackColor = Display.previousFormBackColor;
+
+			Display.isSettingsOpened = false;
 			Application.ExitThread();
 		}
 
@@ -1063,6 +1102,17 @@ namespace JoystickDisplay
 				Display.ColorRStick = RSColor.Color;
 				Display.penRStick = new Pen(Display.ColorRStick, 1);
 				RColor2.BackColor = Display.ColorRStick;
+			}
+		}
+
+		static void SelectBackColor(object sender, EventArgs e)
+		{
+			ColorDialog BackColorD = new ColorDialog();
+			BackColorD.Color = SonicInputDisplay.theDisplay.BackColor;
+			if (BackColorD.ShowDialog() == DialogResult.OK)
+			{
+				SonicInputDisplay.theDisplay.BackColor = BackColorD.Color;
+				FormBackColor2.BackColor = BackColorD.Color;
 			}
 		}
 
