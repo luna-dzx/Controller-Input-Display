@@ -2,16 +2,22 @@ using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Windows.Forms;
+using Timer = System.Windows.Forms.Timer;
 using System.Threading;
 
 using SharpDX;
 using SharpDX.XInput;
 using UserSettings = Controller_Input_Display.Properties.Settings;
+using System.Threading.Tasks;
 
 namespace JoystickDisplay
 {
 	public partial class Display : Form
 	{
+		public static MenuItem startupUpdatesCheck;
+
+		public static Timer refreshTimer = new Timer { Interval = 14 };
+
 		public static bool isSettingsOpened = false;
 		public static Controller controller;
 		public static int LRButtons;
@@ -191,90 +197,16 @@ namespace JoystickDisplay
 			countS = 0;
 			countS2 = 0;
 
-			folderIndex = 0;
+			folderIndex = UserSettings.Default.Index;
 
-			if (System.IO.File.Exists("Index.ini"))
-            {
-				try
-				{
-					string[] lines = System.IO.File.ReadAllLines("Index.ini");
-					int savedIndex = Int32.Parse(lines[0]);
-					folderIndex = savedIndex;
-				}
-				catch { }
-				finally
-                {
-					try
-					{
-						System.IO.File.Delete("Index.ini");
-					}
-					catch { }
-				}
-            }
-			else
-            {
-				folderIndex = UserSettings.Default.Index;
-            }
-
-			//suport for legacy settings
-			if (System.IO.File.Exists("settings.ini"))
-			{
-				try
-				{
-					string[] lines = System.IO.File.ReadAllLines("settings.ini");
-
-					LRButtons = int.Parse(lines[0]);
-					RStickBehave = int.Parse(lines[1]);
-					DeadzoneL = int.Parse(lines[2]);
-					DeadzoneR = int.Parse(lines[3]);
-					DPadBehave = int.Parse(lines[4]);
-					OpacityT = int.Parse(lines[5]);
-
-					string[] colorL = lines[8].Split(',');
-					string[] colorR = lines[9].Split(',');
-					int RL = Int32.Parse(colorL[0]);
-					int GL = Int32.Parse(colorL[1]);
-					int BL = Int32.Parse(colorL[2]);
-					ColorLStick = Color.FromArgb(RL, GL, BL);
-
-					int RR = Int32.Parse(colorR[0]);
-					int GR = Int32.Parse(colorR[1]);
-					int BR = Int32.Parse(colorR[2]);
-					ColorRStick = Color.FromArgb(RR, GR, BR);
-				}
-				catch
-				{
-					LRButtons = 4;
-					RStickBehave = 3;
-					DPadBehave = 1;
-					OpacityT = 1;
-					DeadzoneL = 20;
-					DeadzoneR = 20;
-					ColorLStick = Color.FromArgb(0, 0, 0);
-					ColorRStick = Color.FromArgb(255, 0, 0);
-
-					MessageBox.Show("Could not retrieve every settings from the settings.ini file\nThe program will use default ones", "Input Display", MessageBoxButtons.OK, MessageBoxIcon.Error);
-				}
-				finally
-                {
-					try
-                    {
-						System.IO.File.Delete("settings.ini");
-                    }
-					catch { }
-                }
-			}
-			else
-            {
-				LRButtons = UserSettings.Default.LRButtons;
-				RStickBehave = UserSettings.Default.RStickBehave;
-				DPadBehave = UserSettings.Default.DPadBehave;
-				OpacityT = UserSettings.Default.OpacityT;
-				DeadzoneL = UserSettings.Default.DeadzoneL;
-				DeadzoneR = UserSettings.Default.DeadzoneR;
-				ColorLStick = UserSettings.Default.ColorLStick;
-				ColorRStick = UserSettings.Default.ColorRStick;
-            }
+			LRButtons = UserSettings.Default.LRButtons;
+			RStickBehave = UserSettings.Default.RStickBehave;
+			DPadBehave = UserSettings.Default.DPadBehave;
+			OpacityT = UserSettings.Default.OpacityT;
+			DeadzoneL = UserSettings.Default.DeadzoneL;
+			DeadzoneR = UserSettings.Default.DeadzoneR;
+			ColorLStick = UserSettings.Default.ColorLStick;
+			ColorRStick = UserSettings.Default.ColorRStick;
 
 			reloadImages();
 
@@ -315,16 +247,37 @@ namespace JoystickDisplay
 			this.PreviewKeyDown += new PreviewKeyDownEventHandler(keyPress);
 
 			EventHandler settings = new EventHandler(Msettings);
+
+			EventHandler checkForUpdates = new EventHandler((o, e) =>
+			{
+				Task.Run(() => SonicInputDisplay.StartUpdateChecking());
+			});
+
 			EventHandler exit = new EventHandler(Mexit);
+
+			startupUpdatesCheck = new MenuItem("Check for updates at program startup", new EventHandler(MstartupUpdatesCheck));
+			startupUpdatesCheck.Checked = UserSettings.Default.UpdateCheckAtStartup;
 
 			ContextMenu context = new ContextMenu();
 			context.MenuItems.Add("Settings", settings);
 			context.MenuItems.Add("-");
+			context.MenuItems.Add(startupUpdatesCheck);
+			context.MenuItems.Add("Check for updates now", checkForUpdates);
+			context.MenuItems.Add("-");
 			context.MenuItems.Add("Exit", exit);
 			ContextMenu = context;
+
+            refreshTimer.Tick += RefreshTimer_Tick;
+			refreshTimer.Start();
 		}
 
-		public void Msettings(object sender, EventArgs e)
+        private void RefreshTimer_Tick(object sender, EventArgs e)
+        {
+			setControllerDataSADX();
+			Refresh();
+		}
+
+        public void Msettings(object sender, EventArgs e)
         {
 			if(isSettingsOpened)
             {
@@ -354,6 +307,13 @@ namespace JoystickDisplay
 			}).Start();
 		}
 
+		public void MstartupUpdatesCheck(object sender, EventArgs e)
+        {
+			UserSettings.Default.UpdateCheckAtStartup = !UserSettings.Default.UpdateCheckAtStartup;
+
+			startupUpdatesCheck.Checked = UserSettings.Default.UpdateCheckAtStartup;
+		}
+
 		public void Mexit(object sender, EventArgs e)
 		{
 			if (isSettingsOpened)
@@ -366,25 +326,25 @@ namespace JoystickDisplay
 
 		public void setControllerDataSADX()
 		{
-			if (controller == null)
-            {
+			State state;
+			try
+			{
+				state = controller.GetState();
+			}
+			catch
+			{
 				int i;
 				for (i = 0; i < 4; i++)
-                {
+				{
 					controller = new Controller((UserIndex)i);
-					if(controller.IsConnected)
-                    {
+					if (controller.IsConnected)
+					{
 						break;
-                    }
-                }
+					}
+				}
 				return;
-            }
-			if(!controller.IsConnected)
-            {
-				controller = null;
-				return;
-            }
-			var state = controller.GetState();
+			}
+
 			int gamepadButtons = (int)state.Gamepad.Buttons;
 
 			A = gamepadButtons & 4096;
@@ -399,6 +359,7 @@ namespace JoystickDisplay
 			DLeft = gamepadButtons & 4;
 			DRight = gamepadButtons & 8;
 
+			//Option using the stick line chosen
 			if (DPadBehave == 2)
 			{
 				joyY = 0;
@@ -420,8 +381,9 @@ namespace JoystickDisplay
 
 				if (DUp + DDown + DLeft + DRight == 0)
 				{
-					x = (int)(state.Gamepad.LeftThumbX / 257);
-					y = (int)(state.Gamepad.LeftThumbY / 257);
+					x = state.Gamepad.LeftThumbX / 257;
+					y = state.Gamepad.LeftThumbY / 257;
+					//if the stick has passed the deadzone
 					if (Math.Sqrt(Math.Pow(x, 2) + Math.Pow(y, 2)) > DeadzoneL)
 					{
 						joyX = x;
@@ -429,11 +391,12 @@ namespace JoystickDisplay
 					}
 				}
 			}
-
-			if (DPadBehave == 1)
+			//Option uses the images chosen
+			else
 			{
-				x = (int)(state.Gamepad.LeftThumbX / 257);
-				y = (int)(state.Gamepad.LeftThumbY / 257);
+				x = state.Gamepad.LeftThumbX / 257;
+				y = state.Gamepad.LeftThumbY / 257;
+				//if the stick has passed the deadzone
 				if (Math.Sqrt(Math.Pow(x, 2) + Math.Pow(y, 2)) > DeadzoneL)
 				{
 					joyX = x;
@@ -446,8 +409,9 @@ namespace JoystickDisplay
 				}
 			}
 
-			Rx = (int)(state.Gamepad.RightThumbX / 257);
-			Ry = (int)(state.Gamepad.RightThumbY / 257);
+			Rx = state.Gamepad.RightThumbX / 257;
+			Ry = state.Gamepad.RightThumbY / 257;
+			//if the stick has passed the deadzone
 			if (Math.Sqrt(Math.Pow(Rx, 2) + Math.Pow(Ry, 2)) > DeadzoneR)
 			{
 				joyRX = Rx;
@@ -459,41 +423,36 @@ namespace JoystickDisplay
 				joyRY = 0;
 			}
 
-			if (LRButtons == 1)
+			//Option L & R		OR		Option Only trigger = L & R
+			if (LRButtons == 1 || LRButtons == 2)
 			{
+				//Option Varies with the pression
 				if (OpacityT == 1)
 				{
 					L = state.Gamepad.LeftTrigger;
 					R = state.Gamepad.RightTrigger;
 				}
+				//option Full or nothing
 				if (OpacityT == 2)
 				{
 					L = state.Gamepad.LeftTrigger * 255;
 					R = state.Gamepad.RightTrigger * 255;
 				}
-
+			}
+			if (LRButtons == 1)
+			{
 				L += gamepadButtons & 256;
 				R += gamepadButtons & 512;
 			}
-			if (LRButtons == 2)
-			{
-				if (OpacityT == 1)
-				{
-					L = state.Gamepad.LeftTrigger;
-					R = state.Gamepad.RightTrigger;
-				}
-				if (OpacityT == 2)
-				{
-					L = state.Gamepad.LeftTrigger * 255;
-					R = state.Gamepad.RightTrigger * 255;
-				}
-			}
+
+			//Option Only shoulder = L & R
 			if (LRButtons == 3)
-			{
+            {
 				L = gamepadButtons & 256;
 				R = gamepadButtons & 512;
-
 			}
+
+			//Option LT/LB & RT/RB
 			if (LRButtons == 4)
 			{
 				if (OpacityT == 1)
@@ -521,7 +480,7 @@ namespace JoystickDisplay
 					R = 255;
 				}
 			}
-			if (RStickBehave == 3)
+			else if (RStickBehave == 3)
 			{
 				if (LT == 0 && joyRX < 0)
 				{
@@ -532,7 +491,7 @@ namespace JoystickDisplay
 					RT = 255;
 				}
 			}
-			if (RStickBehave == 4)
+			else if (RStickBehave == 4)
 			{
 				if (LB == 0 && joyRX < 0)
 				{
@@ -854,286 +813,6 @@ namespace JoystickDisplay
 			{
 				reloadImages();
 			}
-		}
-	}
-
-	public partial class Settings : Form
-	{
-		private static ComboBox TSbuttons;
-		private static ComboBox TAlpha;
-		private static ComboBox RSbehave;
-		private static ComboBox DPbehave;
-		private static NumericUpDown LUpDown;
-		private static NumericUpDown RUpDown;
-		private static Button LColor2;
-		private static Button RColor2;
-		private static Button FormBackColor2;
-		private static EventHandler LeftColor = new EventHandler(SelectLColor);
-		private static EventHandler RightColor = new EventHandler(SelectRColor);
-		private static EventHandler BackColorE = new EventHandler(SelectBackColor);
-		private static EventHandler OKE = new EventHandler(OkF);
-		private static EventHandler CancelE = new EventHandler(CancelF);
-
-		public Settings()
-		{
-			MaximizeBox = false;
-			BackColor = Color.FromArgb(240, 240, 240);
-			ClientSize = new Size(401, 350);
-			FormBorderStyle = FormBorderStyle.FixedSingle;
-			Icon = new Icon("icon.ico");
-			Text = "Settings";
-			FormClosing += CancelF;
-
-			Label TSButt = AddConstantLabel("Trigger and Shoulder buttons =", new Point(20, 22));
-			Controls.Add(TSButt);
-
-			TSbuttons = new ComboBox();
-			TSbuttons.Items.Add("L & R");
-			TSbuttons.Items.Add("Only Trigger = L & R");
-			TSbuttons.Items.Add("Only Shoulder = L & R");
-			TSbuttons.Items.Add("LT/LB & RT/RB");
-			TSbuttons.Location = new Point(230, 20);
-			TSbuttons.Size = new Size(150, 1);
-			TSbuttons.DropDownStyle = ComboBoxStyle.DropDownList;
-			TSbuttons.SelectedIndex = Display.LRButtons - 1;
-			TSbuttons.SelectedIndexChanged += UpdateSettings;
-			Controls.Add(TSbuttons);
-
-			Label TriggAlpha = AddConstantLabel("Trigger buttons opacity :", new Point(20, 52));
-			Controls.Add(TriggAlpha);
-
-			TAlpha = new ComboBox();
-			TAlpha.Items.Add("Varies with the pression");
-			TAlpha.Items.Add("Full or nothing");
-			TAlpha.Location = new Point(230, 50);
-			TAlpha.Size = new Size(150, 1);
-			TAlpha.DropDownStyle = ComboBoxStyle.DropDownList;
-			TAlpha.SelectedIndex = Display.OpacityT - 1;
-			TAlpha.SelectedIndexChanged += UpdateSettings;
-			Controls.Add(TAlpha);
-
-			Label RSbeha = AddConstantLabel("Right Stick =", new Point(20, 82));
-			Controls.Add(RSbeha);
-
-			RSbehave = new ComboBox();
-			RSbehave.Items.Add("An other stick");
-			RSbehave.Items.Add("L & R");
-			RSbehave.Items.Add("LT & RT");
-			RSbehave.Items.Add("LB & RB");
-			RSbehave.Location = new Point(230, 80);
-			RSbehave.Size = new Size(150, 1);
-			RSbehave.DropDownStyle = ComboBoxStyle.DropDownList;
-			RSbehave.SelectedIndex = Display.RStickBehave - 1;
-			RSbehave.SelectedIndexChanged += UpdateSettings;
-			Controls.Add(RSbehave);
-
-			Label DPad = AddConstantLabel("DPad behaviour :", new Point(20, 112));
-			Controls.Add(DPad);
-
-			DPbehave = new ComboBox();
-			DPbehave.Items.Add("Uses the images");
-			DPbehave.Items.Add("Uses the stick line");
-			DPbehave.Location = new Point(230, 110);
-			DPbehave.Size = new Size(150, 1);
-			DPbehave.DropDownStyle = ComboBoxStyle.DropDownList;
-			DPbehave.SelectedIndex = Display.DPadBehave - 1;
-			DPbehave.SelectedIndexChanged += UpdateSettings;
-			Controls.Add(DPbehave);
-
-			Label Dead = AddConstantLabel("Deadzones :", new Point(20, 152));
-			Controls.Add(Dead);
-
-			Label LDead = AddConstantLabel("Left Stick :", new Point(20, 179));
-			Controls.Add(LDead);
-
-			LUpDown = new NumericUpDown();
-			LUpDown.Maximum = 130;
-			LUpDown.Minimum = 1;
-			LUpDown.Location = new Point(100, 178);
-			LUpDown.Size = new Size(70, 23);
-			LUpDown.Value = Display.DeadzoneL;
-			LUpDown.ValueChanged += UpdateSettings;
-			Controls.Add(LUpDown);
-
-			Label RDead = AddConstantLabel("Right Stick :", new Point(220, 179));
-			Controls.Add(RDead);
-
-			RUpDown = new NumericUpDown();
-			RUpDown.Maximum = 130;
-			RUpDown.Minimum = 1;
-			RUpDown.Location = new Point(310, 178);
-			RUpDown.Size = new Size(70, 23);
-			RUpDown.Value = Display.DeadzoneR;
-			RUpDown.ValueChanged += UpdateSettings;
-			Controls.Add(RUpDown);
-
-			Label lineColors = AddConstantLabel("Line colors :", new Point(20, 229));
-			Controls.Add(lineColors);
-
-			Label LCol = AddConstantLabel("Left Stick :", new Point(20, 256));
-			Controls.Add(LCol);
-
-			Button LColor = new Button();
-			LColor.Text = "...";
-			LColor.Location = new Point(131, 252);
-			LColor.Size = new Size(40, 23);
-			LColor.Click += LeftColor;
-			Controls.Add(LColor);
-
-			LColor2 = new Button();
-			LColor2.Text = "";
-			LColor2.Location = new Point(99, 252);
-			LColor2.Size = new Size(23, 23);
-			LColor2.Enabled = false;
-			LColor2.BackColor = Display.ColorLStick;
-			Controls.Add(LColor2);
-
-			Label RCol = AddConstantLabel("Right Stick :", new Point(220, 256));
-			Controls.Add(RCol);
-
-			Button RColor = new Button();
-			RColor.Text = "...";
-			RColor.Location = new Point(341, 252);
-			RColor.Size = new Size(40, 23);
-			RColor.Click += RightColor;
-			Controls.Add(RColor);
-
-			RColor2 = new Button();
-			RColor2.Text = "";
-			RColor2.Location = new Point(309, 252);
-			RColor2.Size = new Size(23, 23);
-			RColor2.Enabled = false;
-			RColor2.BackColor = Display.ColorRStick;
-			Controls.Add(RColor2);
-
-			Label FormBackColorLabel = AddConstantLabel("Backcolor :", new Point(20, 304));
-			Controls.Add(FormBackColorLabel);
-
-			Button FormBackColor = new Button();
-			FormBackColor.Text = "...";
-			FormBackColor.Location = new Point(131, 300);
-			FormBackColor.Size = new Size(40, 23);
-			FormBackColor.Click += BackColorE;
-			Controls.Add(FormBackColor);
-
-			FormBackColor2 = new Button();
-			FormBackColor2.Text = "";
-			FormBackColor2.Location = new Point(99, 300);
-			FormBackColor2.Size = new Size(23, 23);
-			FormBackColor2.Enabled = false;
-			FormBackColor2.BackColor = SonicInputDisplay.theDisplay.BackColor;
-			Controls.Add(FormBackColor2);
-
-			Button OK = new Button();
-			OK.Text = "OK";
-			OK.Location = new Point(220, 300);
-			OK.Click += OKE;
-			Controls.Add(OK);
-			AcceptButton = OK;
-
-			Button Cancel = new Button();
-			Cancel.Text = "Cancel";
-			Cancel.Location = new Point(306, 300);
-			Cancel.Click += CancelE;
-			Controls.Add(Cancel);
-			CancelButton = Cancel;
-		}
-
-		static void OkF(object sender, EventArgs e)
-        {
-			SaveSettings();
-			Display.isSettingsOpened = false;
-			Application.ExitThread();
-		}
-
-		public static void SaveSettings()
-        {
-			UserSettings.Default.LRButtons = Display.LRButtons;
-			UserSettings.Default.RStickBehave = Display.RStickBehave;
-			UserSettings.Default.DeadzoneL = Display.DeadzoneL;
-			UserSettings.Default.DeadzoneR = Display.DeadzoneR;
-			UserSettings.Default.DPadBehave = Display.DPadBehave;
-			UserSettings.Default.OpacityT = Display.OpacityT;
-			UserSettings.Default.ColorLStick = Display.ColorLStick;
-			UserSettings.Default.ColorRStick = Display.ColorRStick;
-			UserSettings.Default.Index = Display.folderIndex;
-			UserSettings.Default.BackgroundColor = SonicInputDisplay.theDisplay.BackColor;
-			UserSettings.Default.Save();
-		}
-
-		static void CancelF(object sender, EventArgs e)
-		{
-			Display.LRButtons = Display.previousLRButtons;
-			Display.RStickBehave = Display.previousRStickBehave;
-			Display.DeadzoneL = Display.previousDeadzoneL;
-			Display.DeadzoneR = Display.previousDeadzoneR;
-			Display.DPadBehave = Display.previousDPadBehave;
-			Display.OpacityT = Display.previousOpacityT;
-
-			Display.ColorLStick = Display.previousColorLStick;
-			Display.ColorRStick = Display.previousColorRStick;
-			Display.penLStick = Display.previousPenLStick;
-			Display.penRStick = Display.previousPenRStick;
-
-			SonicInputDisplay.theDisplay.BackColor = Display.previousFormBackColor;
-
-			Display.isSettingsOpened = false;
-			Application.ExitThread();
-		}
-
-		static void SelectLColor(object sender, EventArgs e)
-		{
-			ColorDialog LSColor = new ColorDialog();
-			LSColor.Color = Display.ColorLStick;
-			if(LSColor.ShowDialog() == DialogResult.OK)
-            {
-				Display.ColorLStick = LSColor.Color;
-				Display.penLStick = new Pen(Display.ColorLStick, 1);
-				LColor2.BackColor = Display.ColorLStick;
-            }
-		}
-
-		static void SelectRColor(object sender, EventArgs e)
-		{
-			ColorDialog RSColor = new ColorDialog();
-			RSColor.Color = Display.ColorRStick;
-			if (RSColor.ShowDialog() == DialogResult.OK)
-			{
-				Display.ColorRStick = RSColor.Color;
-				Display.penRStick = new Pen(Display.ColorRStick, 1);
-				RColor2.BackColor = Display.ColorRStick;
-			}
-		}
-
-		static void SelectBackColor(object sender, EventArgs e)
-		{
-			ColorDialog BackColorD = new ColorDialog();
-			BackColorD.Color = SonicInputDisplay.theDisplay.BackColor;
-			if (BackColorD.ShowDialog() == DialogResult.OK)
-			{
-				SonicInputDisplay.theDisplay.BackColor = BackColorD.Color;
-				FormBackColor2.BackColor = BackColorD.Color;
-			}
-		}
-
-		static void UpdateSettings(object sender, EventArgs e)
-		{
-			Display.LRButtons = TSbuttons.SelectedIndex + 1;
-			Display.OpacityT = TAlpha.SelectedIndex + 1;
-			Display.RStickBehave = RSbehave.SelectedIndex + 1;
-			Display.DPadBehave = DPbehave.SelectedIndex + 1;
-			Display.DeadzoneL = (int)LUpDown.Value;
-			Display.DeadzoneR = (int)RUpDown.Value;
-		}
-
-		static Label AddConstantLabel(string text, Point location)
-		{
-			Label label = new Label();
-			label.Text = text;
-			label.Location = location;
-			label.AutoSize = true;
-			label.Font = new Font("Arial", 10);
-			return label;
 		}
 	}
 }
