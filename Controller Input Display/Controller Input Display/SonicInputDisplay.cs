@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
@@ -18,23 +19,26 @@ public class SonicInputDisplay
 	[DllImport("user32.dll")]
 	static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
-	[DllImport("kernel32.dll")]
-	public static extern IntPtr OpenProcess(int dwDesiredAccess, bool bInheritHandle, int dwProcessId);
-
-	[DllImport("kernel32.dll")]
-	public static extern bool ReadProcessMemory(int hProcess,
-		int lpBaseAddress, byte[] lpBuffer, int dwSize, ref int lpNumberOfBytesRead);
-
 	public static IntPtr processHandle = IntPtr.Zero;
-	public static int gameID = 1;
 	public static bool loop = true;
 
 	public static Display theDisplay;
+
+	public readonly static string programDir = AppDomain.CurrentDomain.BaseDirectory;
+
+	public readonly static int processID = Process.GetCurrentProcess().Id;
+
+	public const string Version = "2.5";
 
 	public static void Main()
 	{
 		var handle = GetConsoleWindow();
 		ShowWindow(handle, SW_HIDE);
+
+		if(UserSettings.Default.UpdateCheckAtStartup)
+        {
+			Task.Run(() => StartUpdateChecking());
+        }
 
 		theDisplay = new Display();
 		theDisplay.ClientSize = new Size(216, 136);
@@ -45,50 +49,11 @@ public class SonicInputDisplay
 		theDisplay.BackColor = Color.FromArgb(0, 0, 0);
 		theDisplay.Text = "Input Display";
         theDisplay.FormClosing += TheDisplay_FormClosing;
-		if(System.IO.File.Exists("BackgroundColor.ini"))
-        {
-			try
-			{
-				string[] lines = System.IO.File.ReadAllLines("BackgroundColor.ini");
-				string[] color = lines[0].Split(',');
-				int r = Int32.Parse(color[0]);
-				int g = Int32.Parse(color[1]);
-				int b = Int32.Parse(color[2]);
-				theDisplay.BackColor = Color.FromArgb(r, g, b);
-			}
-			catch { }
-			finally
-            {
-				try
-                {
-					System.IO.File.Delete("BackgroundColor.ini");
-                }
-				catch { }
-            }
-        }
-		else
-        {
-			theDisplay.BackColor = UserSettings.Default.BackgroundColor;
-        }
 
-		//Thread to handle the window
-		new Thread(() =>
-		{
-			Thread.CurrentThread.IsBackground = true;
-			theDisplay.ShowDialog();
-			Settings.SaveSettings();
-			loop = false;
-		}).Start();
+		theDisplay.BackColor = UserSettings.Default.BackgroundColor;
 
-		while (loop)
-		{
-			switch (gameID)
-			{
-				case 1: setValuesFromSADX(); break;
-			}
-			theDisplay.Refresh();
-			System.Threading.Thread.Sleep(14);
-		}
+		theDisplay.ShowDialog();
+		Settings.SaveSettings();
 	}
 
     private static void TheDisplay_FormClosing(object sender, FormClosingEventArgs e)
@@ -99,8 +64,18 @@ public class SonicInputDisplay
 		}
 	}
 
-    private static void setValuesFromSADX()
-	{
-		theDisplay.setControllerDataSADX();
+	public static void StartUpdateChecking()
+    {
+		using (Process updaterProcess = new Process())
+		{
+			updaterProcess.StartInfo = new ProcessStartInfo()
+			{
+				FileName = programDir + "\\" + "Updater.exe",
+				WorkingDirectory = programDir,
+				Arguments = "-v:\'" + Version + "\' -pid:" +processID,
+				Verb = "runas"
+			};
+			updaterProcess.Start();
+		}
 	}
 }
