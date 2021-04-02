@@ -128,11 +128,15 @@ namespace JoystickDisplay
 
 		public static Color ColorLStick;
 		public static Color ColorRStick;
+		public static float LStickWidth;
+		public static float RStickWidth;
 		public static Pen penLStick;
 		public static Pen penRStick;
 
 		public static Color previousColorLStick;
 		public static Color previousColorRStick;
+		public static float previousLStickWidth;
+		public static float previousRStickWidth;
 		public static Pen previousPenLStick;
 		public static Pen previousPenRStick;
 
@@ -207,11 +211,13 @@ namespace JoystickDisplay
 			DeadzoneR = UserSettings.Default.DeadzoneR;
 			ColorLStick = UserSettings.Default.ColorLStick;
 			ColorRStick = UserSettings.Default.ColorRStick;
+			LStickWidth = UserSettings.Default.LStickWidth;
+			RStickWidth = UserSettings.Default.RStickWidth;
 
 			reloadImages();
 
-			penLStick = new Pen(ColorLStick, 1);
-			penRStick = new Pen(ColorRStick, 1);
+			penLStick = new Pen(ColorLStick, LStickWidth);
+			penRStick = new Pen(ColorRStick, RStickWidth);
 			fontArial = new Font("Arial", 10, FontStyle.Bold, GraphicsUnit.Point);
 
 			recL = new Rectangle(40, 4, 96, 36);
@@ -292,6 +298,8 @@ namespace JoystickDisplay
 
 			previousColorLStick = ColorLStick;
 			previousColorRStick = ColorRStick;
+			previousLStickWidth = LStickWidth;
+			previousRStickWidth = RStickWidth;
 			previousPenLStick = penLStick;
 			previousPenRStick = penRStick;
 

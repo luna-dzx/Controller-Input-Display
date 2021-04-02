@@ -154,5 +154,29 @@ namespace Controller_Input_Display.Properties {
                 this["UpdateCheckAtStartup"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        public float LStickWidth {
+            get {
+                return ((float)(this["LStickWidth"]));
+            }
+            set {
+                this["LStickWidth"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        public float RStickWidth {
+            get {
+                return ((float)(this["RStickWidth"]));
+            }
+            set {
+                this["RStickWidth"] = value;
+            }
+        }
     }
 }

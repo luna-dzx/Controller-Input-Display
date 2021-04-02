@@ -15,6 +15,8 @@ namespace JoystickDisplay
 		private static NumericUpDown RUpDown;
 		private static Button LColor2;
 		private static Button RColor2;
+		private static NumericUpDown LSWidthUpDown;
+		private static NumericUpDown RSWidthUpDown;
 		private static Button FormBackColor2;
 		private static EventHandler LeftColor = new EventHandler(SelectLColor);
 		private static EventHandler RightColor = new EventHandler(SelectRColor);
@@ -26,7 +28,7 @@ namespace JoystickDisplay
 		{
 			MaximizeBox = false;
 			BackColor = Color.FromArgb(240, 240, 240);
-			ClientSize = new Size(401, 350);
+			ClientSize = new Size(401, 420);
 			FormBorderStyle = FormBorderStyle.FixedSingle;
 			Icon = new Icon("icon.ico");
 			Text = "Settings";
@@ -121,16 +123,22 @@ namespace JoystickDisplay
 			RUpDown.ValueChanged += UpdateSettings;
 			Controls.Add(RUpDown);
 
-			Label lineColors = AddConstantLabel("Line colors :", new Point(20, 229));
+			Label lineSettings = AddConstantLabel("Line stick settings :", new Point(20, 229));
+			Controls.Add(lineSettings);
+
+			Label lineColors = AddConstantLabel("Color :", new Point(99, 257));
 			Controls.Add(lineColors);
 
-			Label LCol = AddConstantLabel("Left Stick :", new Point(20, 256));
+			Label lineThickness = AddConstantLabel("Thickness :", new Point(220, 257));
+			Controls.Add(lineThickness);
+
+			Label LCol = AddConstantLabel("L Stick :", new Point(20, 286));
 			Controls.Add(LCol);
 
 			Button LColor = new Button
 			{
 				Text = "...",
-				Location = new Point(131, 252),
+				Location = new Point(131, 282),
 				Size = new Size(40, 23)
 			};
 			LColor.Click += LeftColor;
@@ -139,20 +147,20 @@ namespace JoystickDisplay
 			LColor2 = new Button
 			{
 				Text = "",
-				Location = new Point(99, 252),
+				Location = new Point(99, 282),
 				Size = new Size(23, 23),
 				Enabled = false,
 				BackColor = Display.ColorLStick
 			};
 			Controls.Add(LColor2);
 
-			Label RCol = AddConstantLabel("Right Stick :", new Point(220, 256));
+			Label RCol = AddConstantLabel("R Stick :", new Point(20, 315));
 			Controls.Add(RCol);
 
 			Button RColor = new Button
 			{
 				Text = "...",
-				Location = new Point(341, 252),
+				Location = new Point(131, 311),
 				Size = new Size(40, 23)
 			};
 			RColor.Click += RightColor;
@@ -161,20 +169,52 @@ namespace JoystickDisplay
 			RColor2 = new Button
 			{
 				Text = "",
-				Location = new Point(309, 252),
+				Location = new Point(99, 311),
 				Size = new Size(23, 23),
 				Enabled = false,
 				BackColor = Display.ColorRStick
 			};
 			Controls.Add(RColor2);
 
-			Label FormBackColorLabel = AddConstantLabel("Backcolor :", new Point(20, 304));
+			Label separator = new Label()
+			{
+				Location = new Point(195, 250),
+				Width = 2,
+				Size = new Size(1, 90),
+				BorderStyle = BorderStyle.Fixed3D,
+				Enabled = false
+			};
+			Controls.Add(separator);
+
+			LSWidthUpDown = new NumericUpDown
+			{
+				Maximum = 50,
+				Minimum = 1,
+				Location = new Point(220, 283),
+				Size = new Size(70, 23),
+				Value = (decimal)Display.LStickWidth
+			};
+			LSWidthUpDown.ValueChanged += UpdateThicknessSettings;
+			Controls.Add(LSWidthUpDown);
+
+			RSWidthUpDown = new NumericUpDown
+			{
+				Maximum = 50,
+				Minimum = 1,
+				Location = new Point(220, 312),
+				Size = new Size(70, 23),
+				Value = (decimal)Display.RStickWidth
+			};
+			RSWidthUpDown.ValueChanged += UpdateThicknessSettings;
+			Controls.Add(RSWidthUpDown);
+
+			Label FormBackColorLabel = AddConstantLabel("Backcolor :", new Point(20, ClientSize.Height - 36));
 			Controls.Add(FormBackColorLabel);
 
 			Button FormBackColor = new Button
 			{
 				Text = "...",
-				Location = new Point(131, 300),
+				Location = new Point(131, ClientSize.Height - 40),
 				Size = new Size(40, 23)
 			};
 			FormBackColor.Click += BackColorE;
@@ -183,7 +223,7 @@ namespace JoystickDisplay
 			FormBackColor2 = new Button
 			{
 				Text = "",
-				Location = new Point(99, 300),
+				Location = new Point(99, ClientSize.Height - 40),
 				Size = new Size(23, 23),
 				Enabled = false,
 				BackColor = SonicInputDisplay.theDisplay.BackColor
@@ -193,7 +233,7 @@ namespace JoystickDisplay
 			Button OK = new Button
 			{
 				Text = "OK",
-				Location = new Point(220, 300)
+				Location = new Point(220, ClientSize.Height - 40)
 			};
 			OK.Click += OKE;
 			Controls.Add(OK);
@@ -202,7 +242,7 @@ namespace JoystickDisplay
 			Button Cancel = new Button
 			{
 				Text = "Cancel",
-				Location = new Point(306, 300)
+				Location = new Point(306, ClientSize.Height - 40)
 			};
 			Cancel.Click += CancelE;
 			Controls.Add(Cancel);
@@ -228,6 +268,8 @@ namespace JoystickDisplay
 			UserSettings.Default.ColorRStick = Display.ColorRStick;
 			UserSettings.Default.Index = Display.folderIndex;
 			UserSettings.Default.BackgroundColor = SonicInputDisplay.theDisplay.BackColor;
+			UserSettings.Default.LStickWidth = Display.LStickWidth;
+			UserSettings.Default.RStickWidth = Display.RStickWidth;
 			UserSettings.Default.Save();
 		}
 
@@ -242,6 +284,10 @@ namespace JoystickDisplay
 
 			Display.ColorLStick = Display.previousColorLStick;
 			Display.ColorRStick = Display.previousColorRStick;
+
+			Display.LStickWidth = Display.previousLStickWidth;
+			Display.RStickWidth = Display.previousRStickWidth;
+
 			Display.penLStick = Display.previousPenLStick;
 			Display.penRStick = Display.previousPenRStick;
 
@@ -257,7 +303,7 @@ namespace JoystickDisplay
 			if (LSColor.ShowDialog() == DialogResult.OK)
 			{
 				Display.ColorLStick = LSColor.Color;
-				Display.penLStick = new Pen(Display.ColorLStick, 1);
+				Display.penLStick = new Pen(Display.ColorLStick, Display.LStickWidth);
 				LColor2.BackColor = Display.ColorLStick;
 			}
 		}
@@ -268,7 +314,7 @@ namespace JoystickDisplay
 			if (RSColor.ShowDialog() == DialogResult.OK)
 			{
 				Display.ColorRStick = RSColor.Color;
-				Display.penRStick = new Pen(Display.ColorRStick, 1);
+				Display.penRStick = new Pen(Display.ColorRStick, Display.RStickWidth);
 				RColor2.BackColor = Display.ColorRStick;
 			}
 		}
@@ -291,6 +337,15 @@ namespace JoystickDisplay
 			Display.DPadBehave = DPbehave.SelectedIndex + 1;
 			Display.DeadzoneL = (int)LUpDown.Value;
 			Display.DeadzoneR = (int)RUpDown.Value;
+		}
+
+		static void UpdateThicknessSettings(object sender, EventArgs e)
+        {
+			Display.LStickWidth = (float)LSWidthUpDown.Value;
+			Display.RStickWidth = (float)RSWidthUpDown.Value;
+
+			Display.penLStick = new Pen(Display.ColorLStick, Display.LStickWidth);
+			Display.penRStick = new Pen(Display.ColorRStick, Display.RStickWidth);
 		}
 
 		private static Font defaultFont = new Font("Arial", 10);
