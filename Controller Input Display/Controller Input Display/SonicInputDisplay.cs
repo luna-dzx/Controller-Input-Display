@@ -28,7 +28,7 @@ public class SonicInputDisplay
 
 	public readonly static int processID = Process.GetCurrentProcess().Id;
 
-	public const string Version = "2.5";
+	public const string Version = "2.5.1";
 
 	public static void Main()
 	{
@@ -51,6 +51,10 @@ public class SonicInputDisplay
         theDisplay.FormClosing += TheDisplay_FormClosing;
 
 		theDisplay.BackColor = UserSettings.Default.BackgroundColor;
+
+#if DEBUG //prevent a stupid error from the try catch (no idea why it still even throws it)
+		Display.controller = new SharpDX.XInput.Controller(SharpDX.XInput.UserIndex.Any);
+#endif
 
 		theDisplay.ShowDialog();
 		Settings.SaveSettings();
