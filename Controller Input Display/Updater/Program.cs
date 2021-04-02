@@ -210,8 +210,8 @@ namespace Updater
                     UpdaterJob updaterJob = jsonObj["UpdaterJob"].ToObject<UpdaterJob>();
 
                     InstallUpdate(ref updaterJob, updateDir);
-                    Directory.Delete(updateDir, true);
                 }
+                Directory.Delete(updateDir, true);
                 Console.WriteLine($"Installed update {i + 1} of {releases.Count}{"\n"}");
                 remainingUpdates.RemoveAt(i);
                 uUpdated = false;
