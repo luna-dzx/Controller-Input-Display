@@ -42,6 +42,9 @@ namespace Updater
         public static Process ParentProcess = null;
         static void Main(string[] args)
         {
+            Console.WriteLine("Controller Input Display - Updater 1.0");
+            Console.WriteLine();
+
             foreach (string arg in args)
             {
                 if (arg.StartsWith("-v:\'"))
