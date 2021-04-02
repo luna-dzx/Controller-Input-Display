@@ -154,7 +154,6 @@ namespace Updater
                 Console.Clear();
                 try { ParentProcess.Kill(); } catch(Exception e) { Console.WriteLine(e.Message); }
 
-                //START OF THE UPDATE ROUTINE
                 Console.WriteLine("Backuping old version");
 
                 if (Directory.Exists("old"))
@@ -163,11 +162,8 @@ namespace Updater
                 }
                 CopyDirectory(programDir, "old");
 
-                
-                //step 1: downloading and extracting the updates
                 List<DirectoryInfo> downloadedReleases = DownloadUpdates(ref releasesToDownload);
 
-                //step 2: start to analyse the releases
                 AnalyseRelease(ref downloadedReleases);                
             }
             Exit("No new updates");
@@ -179,7 +175,6 @@ namespace Updater
             for (int i = 0; i < releases.Count; i++)
             {
                 Console.WriteLine($"Installing extracted update {i + 1} of {releases.Count}");
-                // a faire polus tard aaaaa
                 string updateDir = releases[i].FullName;
                 using (StreamReader reader = File.OpenText(updateDir + "\\updaterjob.json"))
                 using (JsonTextReader treader = new JsonTextReader(reader))
@@ -317,7 +312,7 @@ namespace Updater
             try
             {
                 var client = new HttpClient();
-                client.DefaultRequestHeaders.Add("User-Agent", "Controller-Input-Display-Updater/0.5");
+                client.DefaultRequestHeaders.Add("User-Agent", "Controller-Input-Display-Updater/1.0");
                 response = await client.GetAsync("https://api.github.com/repos/R3FR4G/Controller-Input-Display/releases");
             }
             catch (HttpRequestException)
