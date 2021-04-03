@@ -192,7 +192,8 @@ namespace JoystickDisplay
 				Minimum = 1,
 				Location = new Point(220, 283),
 				Size = new Size(70, 23),
-				Value = (decimal)Display.LStickWidth
+				Value = (decimal)Display.LStickWidth,
+				DecimalPlaces = 2,
 			};
 			LSWidthUpDown.ValueChanged += UpdateThicknessSettings;
 			Controls.Add(LSWidthUpDown);
@@ -203,7 +204,8 @@ namespace JoystickDisplay
 				Minimum = 1,
 				Location = new Point(220, 312),
 				Size = new Size(70, 23),
-				Value = (decimal)Display.RStickWidth
+				Value = (decimal)Display.RStickWidth,
+				DecimalPlaces = 2,
 			};
 			RSWidthUpDown.ValueChanged += UpdateThicknessSettings;
 			Controls.Add(RSWidthUpDown);
