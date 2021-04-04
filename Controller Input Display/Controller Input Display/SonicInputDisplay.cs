@@ -28,7 +28,7 @@ public class SonicInputDisplay
 
 	public readonly static int processID = Process.GetCurrentProcess().Id;
 
-	public const string Version = "2.5.1";
+	public const string Version = "2.5.2";
 
 	public static void Main()
 	{
