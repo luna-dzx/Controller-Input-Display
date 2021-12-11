@@ -3,6 +3,9 @@ An input display that reads directly from XInput controllers, with a customizabl
 
 ![Imgur](https://refrag.s-ul.eu/YQcDN0cq)    
 
+### State:    
+This fork is now discontinued as the original program now support reading from controllers aswell but I might start a new one on a fresh code base at some point
+
 ### Download the program:     
 https://github.com/R3FR4G/Controller-Input-Display/releases/latest     
 
