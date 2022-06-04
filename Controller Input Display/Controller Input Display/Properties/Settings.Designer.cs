@@ -178,5 +178,32 @@ namespace Controller_Input_Display.Properties {
                 this["RStickWidth"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int HasBorder {
+            get {
+                return ((int)(this["HasBorder"]));
+            }
+            set {
+                this["HasBorder"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int HasTitleBar {
+            get {
+                return ((int)(this["HasTitleBar"]));
+            }
+            set {
+                this["HasTitleBar"] = value;
+            }
+        }
+        
+        
+        
     }
 }

@@ -11,3 +11,5 @@ the B key on the keyboard. Pressing R will reset the
 button counts to zero.
 
 Modified by Refrag (https://www.speedrun.com/user/Refrag)
+
+Modified again by luna 😎 (https://www.speedrun.com/user/luna_dzx)

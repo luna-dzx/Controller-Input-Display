@@ -4,6 +4,7 @@ using System.Drawing.Imaging;
 using System.Windows.Forms;
 using Timer = System.Windows.Forms.Timer;
 using System.Threading;
+using System.Runtime.InteropServices;
 
 using SharpDX;
 using SharpDX.XInput;
@@ -14,11 +15,14 @@ namespace JoystickDisplay
 {
 	public partial class Display : Form
 	{
+		
+		#region Variables
+		
 		public static MenuItem startupUpdatesCheck;
 
 		public static Timer refreshTimer = new Timer { Interval = 14 };
 
-		public static bool isSettingsOpened = false;
+		public static bool isSettingsOpened;
 		public static Controller controller;
 		public static int LRButtons;
 		public static int RStickBehave;
@@ -26,6 +30,9 @@ namespace JoystickDisplay
 		public static int DeadzoneR;
 		public static int DPadBehave;
 		public static int OpacityT;
+		
+		public static bool HasBorder;
+		public static bool HasTitleBar;
 
 		public static int previousLRButtons;
 		public static int previousRStickBehave;
@@ -33,6 +40,9 @@ namespace JoystickDisplay
 		public static int previousDeadzoneR;
 		public static int previousDPadBehave;
 		public static int previousOpacityT;
+		
+		public static bool previousHasBorder;
+		public static bool previousHasTitleBar;
 
 		private static int tryCount = 5;
 		ColorMatrix colormatrixL = new ColorMatrix();
@@ -40,56 +50,13 @@ namespace JoystickDisplay
 		ColorMatrix colormatrixLT = new ColorMatrix();
 		ColorMatrix colormatrixRT = new ColorMatrix();
 
-		private static int x;
-		private static int y;
-		private static int Rx;
-		private static int Ry;
-		private static int joyX;
-		private static int joyY;
-		private static int joyRX;
-		private static int joyRY;
-		private static int A;
-		private static int B;
-		private static int X;
-		private static int Y;
-		private static int L;
-		private static int R;
-		private static int LT;
-		private static int LB;
-		private static int RT;
-		private static int RB;
-		private static int S;
-		private static int S2;
-		private static int DUp;
-		private static int DDown;
-		private static int DRight;
-		private static int DLeft;
-
-		private static int prevA;
-		private static int prevB;
-		private static int prevX;
-		private static int prevY;
-		private static int prevL;
-		private static int prevR;
-		private static int prevLT;
-		private static int prevLB;
-		private static int prevRT;
-		private static int prevRB;
-		private static int prevS;
-		private static int prevS2;
-
-		private static int countA;
-		private static int countB;
-		private static int countX;
-		private static int countY;
-		private static int countL;
-		private static int countR;
-		private static int countLT;
-		private static int countLB;
-		private static int countRT;
-		private static int countRB;
-		private static int countS;
-		private static int countS2;
+		// controller data
+		private static int 
+			x, y, Rx, Ry, joyX, joyY, joyRX, joyRY,
+			A, B, X, Y, L, R, LT, LB, RT, RB, S, S2, 
+			DUp, DDown, DRight, DLeft,
+			prevA, prevB, prevX, prevY, prevL, prevR, prevLT, prevLB, prevRT, prevRB, prevS, prevS2,
+			countA, countB, countX, countY, countL, countR, countLT, countLB, countRT, countRB, countS, countS2;
 
 		private static Rectangle recA;
 		private static Rectangle recB;
@@ -152,6 +119,8 @@ namespace JoystickDisplay
 
 		private static bool drawButtonCount = false;
 
+		#endregion
+		
 		public Display()
 		{
 			joyX = 0;
@@ -213,6 +182,9 @@ namespace JoystickDisplay
 			ColorRStick = UserSettings.Default.ColorRStick;
 			LStickWidth = UserSettings.Default.LStickWidth;
 			RStickWidth = UserSettings.Default.RStickWidth;
+			
+			HasBorder = UserSettings.Default.HasBorder == 1;
+			HasTitleBar = UserSettings.Default.HasTitleBar == 1;
 
 			reloadImages();
 
@@ -273,8 +245,20 @@ namespace JoystickDisplay
 			context.MenuItems.Add("Exit", exit);
 			ContextMenu = context;
 
+
+			
+			ControlBox = HasTitleBar;
+			if (HasTitleBar) Text = "Input Display";
+			else Text = String.Empty;
+
+
+			if (HasBorder || HasTitleBar) FormBorderStyle = FormBorderStyle.FixedSingle;
+			else FormBorderStyle = FormBorderStyle.None;
+			
             refreshTimer.Tick += RefreshTimer_Tick;
 			refreshTimer.Start();
+			
+			
 		}
 
         private void RefreshTimer_Tick(object sender, EventArgs e)
@@ -303,6 +287,9 @@ namespace JoystickDisplay
 			previousPenLStick = penLStick;
 			previousPenRStick = penRStick;
 
+			previousHasBorder = HasBorder;
+			previousHasTitleBar = HasTitleBar;
+
 			previousFormBackColor = SonicInputDisplay.theDisplay.BackColor;
 
 			isSettingsOpened = true;
@@ -311,7 +298,10 @@ namespace JoystickDisplay
 			{
 				Application.EnableVisualStyles();
 				Application.SetCompatibleTextRenderingDefault(false);
-				Application.Run(new Settings());
+				Settings settings = new Settings(this);
+				Application.ThreadExit += (o, e) => isSettingsOpened = false;
+				Application.Run(settings);
+				
 			}).Start();
 		}
 
@@ -822,5 +812,32 @@ namespace JoystickDisplay
 				reloadImages();
 			}
 		}
+
+
+		#region Mouse Handling
+
+		// ---------- Move Window Functions ---------- //
+		private const int WmNclButtonDown = 0xA1;
+		private const int HtCaption = 0x2;
+
+		[DllImport("user32.dll")]
+		private static extern int SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
+		[DllImport("user32.dll")]
+		private static extern bool ReleaseCapture();
+		// ------------------------------------------- //
+		
+		
+		protected override void OnMouseDown(MouseEventArgs e)
+		{
+			if (e.Button == MouseButtons.Left && !HasTitleBar)
+			{
+				ReleaseCapture();
+				SendMessage(Handle, WmNclButtonDown, HtCaption, 0);
+			}
+			
+			base.OnMouseDown(e);
+		}
+		
+		#endregion
 	}
 }

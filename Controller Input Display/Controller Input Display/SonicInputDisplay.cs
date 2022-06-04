@@ -28,7 +28,7 @@ public class SonicInputDisplay
 
 	public readonly static int processID = Process.GetCurrentProcess().Id;
 
-	public const string Version = "2.5.2";
+	public const string Version = "3.0.0";
 
 	public static void Main()
 	{
@@ -41,21 +41,25 @@ public class SonicInputDisplay
         }
 
 		theDisplay = new Display();
+		
 		theDisplay.ClientSize = new Size(216, 136);
 		theDisplay.MinimizeBox = false;
 		theDisplay.MaximizeBox = false;
-		theDisplay.FormBorderStyle = FormBorderStyle.FixedSingle;
 		theDisplay.StartPosition = FormStartPosition.CenterScreen;
 		theDisplay.BackColor = Color.FromArgb(0, 0, 0);
-		theDisplay.Text = "Input Display";
+		
+		
         theDisplay.FormClosing += TheDisplay_FormClosing;
 
 		theDisplay.BackColor = UserSettings.Default.BackgroundColor;
+		
+
+		
 
 #if DEBUG //prevent a stupid error from the try catch (no idea why it still even throws it)
 		Display.controller = new SharpDX.XInput.Controller(SharpDX.XInput.UserIndex.Any);
 #endif
-
+		
 		theDisplay.ShowDialog();
 		Settings.SaveSettings();
 	}

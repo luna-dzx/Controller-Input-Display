@@ -22,13 +22,22 @@ namespace JoystickDisplay
 		private static EventHandler RightColor = new EventHandler(SelectRColor);
 		private static EventHandler BackColorE = new EventHandler(SelectBackColor);
 		private static EventHandler OKE = new EventHandler(OkF);
-		private static EventHandler CancelE = new EventHandler(CancelF);
+		private static EventHandler CancelE;
+		
+		private static CheckBox windowHasBorder;
+		private static CheckBox windowHasTitleBar;
 
-		public Settings()
+		private Display _display;
+
+		public Settings(Display display)
 		{
+			_display = display;
+			
+			CancelE = new EventHandler(CancelF);
+			
 			MaximizeBox = false;
 			BackColor = Color.FromArgb(240, 240, 240);
-			ClientSize = new Size(401, 420);
+			ClientSize = new Size(401, 480);
 			FormBorderStyle = FormBorderStyle.FixedSingle;
 			Icon = new Icon("icon.ico");
 			Text = "Settings";
@@ -53,7 +62,7 @@ namespace JoystickDisplay
 			Controls.Add(TriggAlpha);
 
 			TAlpha = new ComboBox();
-			TAlpha.Items.Add("Varies with the pression");
+			TAlpha.Items.Add("Varies with the pressure");
 			TAlpha.Items.Add("Full or nothing");
 			TAlpha.Location = new Point(230, 50);
 			TAlpha.Size = new Size(150, 1);
@@ -209,14 +218,19 @@ namespace JoystickDisplay
 			};
 			RSWidthUpDown.ValueChanged += UpdateThicknessSettings;
 			Controls.Add(RSWidthUpDown);
+			
+			
+			Label windowSettings = AddConstantLabel("Window settings :", new Point(20, 364));
+			Controls.Add(windowSettings);
+			
 
-			Label FormBackColorLabel = AddConstantLabel("Backcolor :", new Point(20, ClientSize.Height - 36));
+			Label FormBackColorLabel = AddConstantLabel("Backcolor :", new Point(20, 394));
 			Controls.Add(FormBackColorLabel);
 
 			Button FormBackColor = new Button
 			{
 				Text = "...",
-				Location = new Point(131, ClientSize.Height - 40),
+				Location = new Point(131, 390),
 				Size = new Size(40, 23)
 			};
 			FormBackColor.Click += BackColorE;
@@ -225,7 +239,7 @@ namespace JoystickDisplay
 			FormBackColor2 = new Button
 			{
 				Text = "",
-				Location = new Point(99, ClientSize.Height - 40),
+				Location = new Point(99, 390),
 				Size = new Size(23, 23),
 				Enabled = false,
 				BackColor = SonicInputDisplay.theDisplay.BackColor
@@ -235,7 +249,7 @@ namespace JoystickDisplay
 			Button OK = new Button
 			{
 				Text = "OK",
-				Location = new Point(220, ClientSize.Height - 40)
+				Location = new Point(220, 420)
 			};
 			OK.Click += OKE;
 			Controls.Add(OK);
@@ -244,12 +258,69 @@ namespace JoystickDisplay
 			Button Cancel = new Button
 			{
 				Text = "Cancel",
-				Location = new Point(306, ClientSize.Height - 40)
+				Location = new Point(306, 420)
 			};
 			Cancel.Click += CancelE;
 			Controls.Add(Cancel);
 			CancelButton = Cancel;
+
+
+			windowHasTitleBar = new CheckBox
+			{
+				Text = "Title Bar",
+				Location = new Point(20, 420),
+				Checked = Display.HasTitleBar
+			};
+			
+			Controls.Add(windowHasTitleBar);
+
+			windowHasBorder = new CheckBox
+			{
+				Text = "Border",
+				Location = new Point(20, 440),
+				Checked = Display.HasBorder
+			};
+			
+			Controls.Add(windowHasBorder);
+			
+			windowHasBorder.Enabled = !windowHasTitleBar.Checked;
+
+			windowHasTitleBar.CheckedChanged += UpdateCheckBoxes;
+			windowHasBorder.CheckedChanged += UpdateCheckBoxes;
+
 		}
+
+
+		void RefreshMainWindow()
+		{
+			_display.Invoke(new MethodInvoker(delegate
+			{
+				
+				_display.ControlBox = Display.HasTitleBar;
+				if (Display.HasTitleBar) _display.Text = "Input Display";
+				else _display.Text = String.Empty;
+
+
+				if (Display.HasBorder || Display.HasTitleBar) _display.FormBorderStyle = FormBorderStyle.FixedSingle;
+				else _display.FormBorderStyle = FormBorderStyle.None;
+				
+				
+				_display.Update();
+				
+			}));
+		}
+
+		void UpdateCheckBoxes(object sender, EventArgs e)
+		{
+			windowHasBorder.Enabled = !windowHasTitleBar.Checked;
+
+			Display.HasTitleBar = windowHasTitleBar.Checked;
+			Display.HasBorder = windowHasBorder.Checked;
+
+			RefreshMainWindow();
+
+		}
+		
 
 		static void OkF(object sender, EventArgs e)
 		{
@@ -272,10 +343,14 @@ namespace JoystickDisplay
 			UserSettings.Default.BackgroundColor = SonicInputDisplay.theDisplay.BackColor;
 			UserSettings.Default.LStickWidth = Display.LStickWidth;
 			UserSettings.Default.RStickWidth = Display.RStickWidth;
+			
+			UserSettings.Default.HasTitleBar = Display.HasTitleBar?1:0;
+			UserSettings.Default.HasBorder = Display.HasBorder?1:0;
+			
 			UserSettings.Default.Save();
 		}
-
-		static void CancelF(object sender, EventArgs e)
+		
+		void CancelF(object sender, EventArgs e)
 		{
 			Display.LRButtons = Display.previousLRButtons;
 			Display.RStickBehave = Display.previousRStickBehave;
@@ -293,10 +368,16 @@ namespace JoystickDisplay
 			Display.penLStick = Display.previousPenLStick;
 			Display.penRStick = Display.previousPenRStick;
 
-			SonicInputDisplay.theDisplay.BackColor = Display.previousFormBackColor;
+			Display.HasTitleBar = Display.previousHasTitleBar;
+			Display.HasBorder = Display.previousHasBorder;
 
-			Display.isSettingsOpened = false;
+			SonicInputDisplay.theDisplay.BackColor = Display.previousFormBackColor;
+			
+			RefreshMainWindow();
 			Application.ExitThread();
+			//Display.isSettingsOpened = false;
+			
+			//Application.ExitThread();
 		}
 
 		static void SelectLColor(object sender, EventArgs e)
@@ -330,7 +411,8 @@ namespace JoystickDisplay
 				FormBackColor2.BackColor = BackColorD.Color;
 			}
 		}
-
+		
+		
 		static void UpdateSettings(object sender, EventArgs e)
 		{
 			Display.LRButtons = TSbuttons.SelectedIndex + 1;
